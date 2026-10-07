@@ -52,7 +52,6 @@ test('自制配方校验与增删', () => {
 
   const rec = s.addCustom(sample);
   assert.match(rec.id, /^my-/);
-  assert.equal(rec.source, 'custom');
   assert.equal(rec.name_display, '测试鸡尾酒');
   assert.equal(s.getCustom().length, 1);
   assert.equal(s.removeCustom(rec.id), true);

@@ -40,7 +40,7 @@ test('启动默认落在推荐页，渲染卡片列表与筛选栏', () => {
   const html = app._env.doc.getElementById('view').innerHTML;
   assert.ok(html.includes('searchInput'), '应有搜索框');
   assert.ok(html.includes('class="card"'), '应有卡片');
-  assert.ok(html.includes('继续加载'), '超过 30 条应有加载更多');
+  assert.ok(html.includes('data-act="gotoPage"'), '应有页码翻页');
   assert.equal(app._env.doc.getElementById('pageTitle').textContent, '推荐');
   const tabs = app._env.doc.querySelectorAll('.tab');
   assert.equal(tabs[0].className, 'tab active');
@@ -58,24 +58,54 @@ test('搜索输入实时过滤（不整页重渲染，保留输入）', () => {
   assert.equal(app.state.page, 1);
 });
 
-test('点分类胶囊切换筛选，再次点击取消', () => {
+test('推荐页筛选：口味 / 材料 / 酒精强度，再次点击取消', () => {
   const app = makeApp();
-  click(app._env.doc, { 'data-act': 'cat', 'data-val': 'Shot' });
-  assert.equal(app.state.category, 'Shot');
-  assert.ok(app._env.doc.getElementById('view').innerHTML.includes('僵尸') === false || true);
-  const shown = Core.filterRecipes(app._store.allRecipes(), { category: 'Shot' });
+
+  click(app._env.doc, { 'data-act': 'fTaste', 'data-val': '甜' });
+  assert.deepEqual(app.state.tastes, ['甜']);
+  let shown = Core.filterRecipes(app._store.allRecipes(), { tastes: ['甜'] }, Tags);
   assert.ok(shown.length > 0);
-  click(app._env.doc, { 'data-act': 'cat', 'data-val': 'Shot' });
-  assert.equal(app.state.category, '');
+  assert.ok(shown.every((d) => Tags.deriveTastes(d).includes('甜')));
+  click(app._env.doc, { 'data-act': 'fTaste', 'data-val': '甜' });
+  assert.deepEqual(app.state.tastes, []);
+
+  const ings = Tags.commonIngredients(app._store.allRecipes(), 24);
+  click(app._env.doc, { 'data-act': 'fIng', 'data-val': ings[0].name });
+  assert.deepEqual(app.state.ingredients, [ings[0].name]);
+  shown = Core.filterRecipes(app._store.allRecipes(), { ingredients: [ings[0].name] }, Tags);
+  assert.ok(shown.length > 0);
+  assert.ok(shown.every((d) => Tags.hasIngredient(d, ings[0].name)));
+  click(app._env.doc, { 'data-act': 'fIng', 'data-val': ings[0].name });
+  assert.deepEqual(app.state.ingredients, []);
+
+  click(app._env.doc, { 'data-act': 'fStr', 'data-val': 'none' });
+  assert.equal(app.state.strength, 'none');
+  shown = Core.filterRecipes(app._store.allRecipes(), { strength: 'none' }, Tags);
+  assert.ok(shown.length > 0);
+  assert.ok(shown.every((d) => Tags.strength(d) === 'none'));
+  click(app._env.doc, { 'data-act': 'fStr', 'data-val': '' });
+  assert.equal(app.state.strength, '');
 });
 
-test('加载更多递增分页', () => {
+test('页码翻页：上一页 / 页码 / 下一页', () => {
   const app = makeApp();
   assert.equal(app.state.page, 1);
-  click(app._env.doc, { 'data-act': 'loadMore' });
+  let html = app._env.doc.getElementById('view').innerHTML;
+  assert.ok(html.includes('第 1 / 47 页'));
+  assert.ok(/class="pg nav"[^>]*disabled/.test(html), '第 1 页「上一页」应禁用');
+
+  click(app._env.doc, { 'data-act': 'gotoPage', 'data-val': '2' });
   assert.equal(app.state.page, 2);
-  const html = app._env.doc.getElementById('view').innerHTML;
-  assert.ok(html.includes('已显示 60 / 1384'));
+  html = app._env.doc.getElementById('view').innerHTML;
+  assert.ok(html.includes('第 2 / 47 页'));
+  assert.ok(/class="pg on"[^>]*>2</.test(html), '第 2 页页码应高亮');
+
+  click(app._env.doc, { 'data-act': 'gotoPage', 'data-val': '47' });
+  assert.equal(app.state.page, 47);
+  html = app._env.doc.getElementById('view').innerHTML;
+  assert.ok(html.includes('第 47 / 47 页'));
+  assert.ok(html.includes('共 1384 款'));
+  assert.ok(/class="pg nav"[^>]*disabled/.test(html), '末页「下一页」应禁用');
 });
 
 test('清除筛选恢复全量并有对应按钮', () => {
@@ -89,7 +119,7 @@ test('清除筛选恢复全量并有对应按钮', () => {
   click(app._env.doc, { 'data-act': 'clearFilter' });
   assert.equal(app.state.q, '');
   html = app._env.doc.getElementById('view').innerHTML;
-  assert.ok(html.includes('继续加载'));
+  assert.ok(html.includes('data-act="gotoPage"'));
 });
 
 test('点卡片进详情，详情可加入酒柜并回到列表', () => {
@@ -251,10 +281,10 @@ test('盲盒取消口感/档位选择会改变池大小', () => {
   assert.ok(html.includes('符合条件：' + app.state.pool.length + ' 款'));
 
   // 选一个口感
-  click(app._env.doc, { 'data-act': 'taste', 'data-val': '浓烈' });
-  assert.deepEqual(app.state.blind.tastes, ['浓烈']);
+  click(app._env.doc, { 'data-act': 'taste', 'data-val': '甜' });
+  assert.deepEqual(app.state.blind.tastes, ['甜']);
   for (const d of app.state.pool) {
-    assert.ok(Tags.deriveTastes(d).includes('浓烈'));
+    assert.ok(Tags.deriveTastes(d).includes('甜'));
   }
 });
 
@@ -308,7 +338,8 @@ test('设置菜单全部入口可打开对应弹层', () => {
   assert.ok(app._env.doc.getElementById('overlay').innerHTML.includes('导出备份'));
 
   app.handleAction('about', null);
-  assert.ok(app._env.doc.getElementById('overlay').innerHTML.includes('TheCocktailDB'));
+  assert.ok(app._env.doc.getElementById('overlay').innerHTML.includes('关于'));
+  assert.ok(!app._env.doc.getElementById('overlay').innerHTML.includes('来源'));
 
   app.handleAction('import', null);
   assert.ok(app._env.doc.getElementById('overlay').innerHTML.includes('importMerge'));

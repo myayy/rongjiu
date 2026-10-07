@@ -48,7 +48,7 @@
 
 - 手机样式的**底部三栏导航**：推荐 / 酒柜 / 盲盒
 - **推荐页**：配方卡片列表 + 详情页 + 「加入酒柜」
-  - **筛选条**：口感（可多选）/ 含酒精与否 / 杯型 + 关键词搜索，可缩小浏览范围
+  - **筛选条**：口味（可多选）/ 材料（可多选）/ 酒精强度（无 · 低 · 高）+ 关键词搜索，可缩小浏览范围
 - **酒柜页**：已收藏列表 + 移除 + 查看详情（空状态要有提示）
 - **盲盒页**：选口感（可多选）+ 含酒精与否 + 杯型 → 随机出一瓶 → 加入酒柜 / 再来一次
 - **自带配方库**（见第 5 节）+ **支持手动新增配方**
@@ -89,22 +89,13 @@
 | 不同酒名 | 1288 个 |
 | 素材总体积 | 约 74 MB |
 
-### 5.3 数据来源与授权（重要）
-
-- **TheCocktailDB**（https://www.thecocktaildb.com/）：免费开放 API，628 条。
-  授权：**非商业 / 学习用途免费，需保留署名**。
-- **Open Drinks**（https://github.com/alfg/opendrinks）：MIT 许可，756 条。
-
-> ⚠️ 仅限个人本地自用，**不要公开上架或用于商业用途**。
-
-### 5.4 `index.zh.json` 字段结构
+### 5.3 `index.zh.json` 字段结构
 
 每条配方包含：
 
 | 字段 | 说明 |
 | --- | --- |
-| `id` | 唯一标识（`tcdb-数字` / `od-xxx`） |
-| `source` | 来源（`thecocktaildb` / `opendrinks`） |
+| `id` | 唯一标识（`tcdb-数字` / `od-xxx`；自制配方为 `my-` 前缀） |
 | `name` | 英文原名 |
 | `name_zh` | 中文名 |
 | `name_display` | **展示名，格式「中文（English）」** |
@@ -112,27 +103,35 @@
 | `ingredients_en` / `ingredients_zh` | 英文 / 中文配料 |
 | `instructions_en` / `instructions_zh` | 英文 / 中文做法 |
 | `image` | 相对图片路径 |
-| `source_url` | 来源链接 |
 
-### 5.5 口感标签自动推导（开发依据）
+> 不保留任何来源信息：`source` / `source_url` 字段已从数据中移除，App 界面也不展示任何来源与署名。
 
-现有数据**没有口感字段**，也没有价格字段。为支持「按口感筛选」，统一从 `ingredients_en`（英文配料）**自动推导**口感标签，无需人工逐条标注。一条配方可同时命中多个口感标签。
+### 5.4 口味标签自动推导（开发依据）
 
-推导规则（配料名称包含以下关键词即命中，不区分大小写）：
+现有数据**没有口味字段**，也没有价格字段。为支持「按口味筛选」，统一从 `ingredients_zh` + `ingredients_en`（中英文配料）**自动推导**口味标签，无需人工逐条标注。一条配方可同时命中多个标签。规则实现在 `js/tags.js` 的 `TASTE_RULES`。
 
-| 口感 | 命中关键词 |
+9 类口味与命中关键词（中英文配料命中任一即打标，不区分大小写）：
+
+| 口味 | 命中关键词（节选） |
 | --- | --- |
-| 🍬 甜 | sugar、syrup、grenadine、honey、sweet vermouth、triple sec、amaretto、kahlua、baileys、creme de cacao、blue curacao、peach schnapps、maraschino、sambuca、cointreau、maple、agave |
-| 🍋 酸 | lime、lemon、grapefruit、sour、yuzu |
-| 🌿 苦 | bitters、angostura、campari、aperol、fernet、amaro、cynar、suze |
-| 🍃 清爽 | soda water、tonic、club soda、sparkling、ginger ale、ginger beer、mint、cucumber、basil、lemonade |
-| 🥛 浓郁 | cream、milk、egg、baileys、kahlua、chocolate、ice cream、whipped cream、yogurt、coconut milk |
-| 🍹 果味 | orange juice、pineapple juice、cranberry juice、apple juice、strawberry、mango、peach、banana、cherry、passion fruit、pomegranate |
-| 🌶️ 辛香 | ginger、cinnamon、nutmeg、clove、pepper、chili、cardamom |
-| ☕ 咖啡 | coffee、espresso、cold brew、kahlua、tia maria |
-| 🍵 茶 | tea、chai、matcha、earl grey、green tea |
+| 🍬 甜 | 糖 / 蜂蜜 / 红石榴 / 甜味美思 / 君度 / 杏仁酒 / 蓝橙 / 枫糖；sugar、syrup、grenadine、honey、sweet vermouth、triple sec、amaretto、kahlua、baileys、cointreau |
+| 🍋 酸 | 青柠 / 柠檬 / 西柚 / 柚子 / 酸甜；lime、lemon、grapefruit、sour、yuzu |
+| 🌿 苦 | 苦精 / 金巴利 / 阿佩罗 / 阿玛罗 / 安高天娜；bitters、angostura、campari、aperol、fernet、amaro |
+| 🍃 清爽 | 苏打 / 气泡 / 汤力 / 姜汁 / 薄荷 / 黄瓜 / 罗勒 / 柠檬水；soda water、tonic、sparkling、ginger ale、mint、cucumber、basil、lemonade |
+| 🥛 浓郁 | 奶油 / 牛奶 / 椰奶 / 炼乳 / 酸奶 / 蛋 / 冰淇淋 / 巧克力；cream、milk、egg、chocolate、ice cream、yogurt |
+| 🍹 果味 | 橙汁 / 菠萝汁 / 蔓越莓汁 / 苹果汁 / 草莓 / 芒果 / 桃 / 香蕉 / 樱桃 / 石榴；orange juice、pineapple juice、cranberry juice、strawberry、mango、peach、banana、cherry |
+| 🌶️ 辛香 | 姜 / 肉桂 / 豆蔻 / 丁香 / 胡椒 / 辣椒 / 八角；ginger、cinnamon、nutmeg、clove、pepper、chili、cardamom |
+| ☕ 咖啡 | 咖啡 / 冷萃 / 提亚玛丽亚；coffee、espresso、cold brew、kahlua、tia maria |
+| 🍵 茶 | 茶叶 / 红茶 / 绿茶 / 伯爵茶 / 抹茶；tea、chai、matcha、earl grey、green tea |
 
-> 说明：盲盒页的「价格区间」筛选因数据无价格字段，**改为「含酒精与否」+「杯型」**，与口感共同作为筛选条件。
+> 兜底：未命中任何关键词的配方按是否含酒精判定 —— 无酒精 → 🍃 清爽，含酒精 → 🥛 浓郁。
+
+### 5.5 酒精强度与材料标签（同样自动推导）
+
+- **酒精强度**（数据无 ABV）：`alcoholic` 以 `Non` 开头 → **无酒精**；否则配料含伏特加 / 金酒 / 朗姆 / 威士忌 / 龙舌兰 / 白兰地 / 清酒等烈酒 → **高度**；其余 → **低度**。
+- **材料标签**：从全部配方的中文配料名自动汇总高频材料（去掉括号内用量，以及「冰块 / 冰 / 水」这类无区分度的项），取前 24 个作为筛选标签；筛选时按材料名**包含匹配**，例如点「朗姆酒」可同时命中「白朗姆酒 / 黑朗姆酒」。
+
+> 说明：盲盒页的「价格区间」筛选因数据无价格字段，**改为「含酒精与否」+「杯型」**，与口味共同作为筛选条件。
 
 ---
 
@@ -149,19 +148,19 @@
 ## 7. 待确认 / 风险（开发前需注意）
 
 1. ~~盲盒的筛选维度缺数据~~ **已解决（2026-10-07）**
-   口感通过从 `ingredients_en` 自动推导得出（见 5.5），价格因无数据改为「含酒精与否 + 杯型」，与口感共同作为筛选条件。
+   口感通过从 `ingredients_en` 自动推导得出（见 5.4），价格因无数据改为「含酒精与否 + 杯型」，与口感共同作为筛选条件。
 
 2. **推荐页内容口径**
    原文确认的表述是「就单纯的我介绍的酒」。需明确推荐页是展示**全部配方**，还是只展示**用户手动标记过的那部分**。
 
 3. **单位不统一**
-   两个来源的用量单位混用，若后续要统一展示需额外处理。
+   配方用量单位不统一（oz、tsp、cL、盎司、汤匙、毫升等混用），若后续要统一展示需额外处理。
 
 ---
 
 ## 8. 开发环境备注
 
-- 本机**没有安装 git**（已验证），拉取外部资源需用其他方式（如仓库 zip 包）。
+- Git 已安装于 `F:\Git`（版本 2.55.0.windows.5）；若终端 PATH 未继承，可用完整路径 `F:\Git\cmd\git.exe` 调用。项目已在 `f:\桌面\融酒` 初始化本地仓库，分支 `main`。
 - 本机可正常联网（命令行可访问外部 API）。
 - 免费在线翻译接口不可用（Google 限流、MyMemory 返回错配、LibreTranslate 节点不可用），因此翻译由 AI 人工分批完成。
 
@@ -176,3 +175,5 @@
 | 2026-10-07 | 完成中文化（酒名「中文（English）」格式，配料与做法全中文），生成 `index.zh.json`。 |
 | 2026-10-07 | 建立本文档 PRO.md，作为后续开发依据。 |
 | 2026-10-07 | 确定筛选方案：口感从配料自动推导（新增 5.5），盲盒筛选改为「口感 + 含酒精与否 + 杯型」，去掉价格区间；推荐页同步加筛选条。7.1 风险标为已解决。 |
+| 2026-10-07 | **删除全部来源信息**：数据中移除 `source` / `source_url` 字段，详情页、设置/关于页均不再展示来源与署名，删除原文 5.3「数据来源与授权」章节。 |
+| 2026-10-07 | 推荐页筛选条改为 **口味（9 类，可多选）/ 材料（高频常见材料，可多选）/ 酒精强度（无 · 低 · 高）** + 关键词搜索；口味标签由原 8 类统一为 PRO 5.4 的 9 类；酒精强度按配料自动判定三档。 |

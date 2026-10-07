@@ -129,14 +129,19 @@ html, body {
 }
 .search:focus { border-color: var(--accent); }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
-.chips.scroll { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
-.chips.scroll::-webkit-scrollbar { display: none; }
+.chips.scroll { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; padding-bottom: 6px; }
+.chips.scroll::-webkit-scrollbar { height: 6px; }
+.chips.scroll::-webkit-scrollbar-thumb { background: #d9d3c6; border-radius: 999px; }
+.chips.scroll::-webkit-scrollbar-track { background: transparent; }
 .fchip {
   border: 1px solid var(--line); background: var(--card); color: #6d675d;
   border-radius: 999px; padding: 5px 11px; font-size: 12px; cursor: pointer;
   white-space: nowrap;
 }
 .fchip.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+.fgroup { margin-top: 8px; }
+.fgroup-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; font-weight: 700; }
+.fgroup .chips { margin-top: 0; }
 
 /* ---- 详情 ---- */
 .detail-hero { position: relative; border-radius: var(--radius); overflow: hidden; background: var(--accent-soft); }
@@ -240,10 +245,19 @@ html, body {
 
 /* ---- 其它 ---- */
 .more-hint { text-align: center; font-size: 12px; color: var(--muted); padding: 10px 0 4px; }
-.load-more {
-  width: 100%; border: 1px dashed var(--line); background: transparent;
-  border-radius: 12px; padding: 10px; color: var(--muted); font-size: 13px; cursor: pointer;
+
+/* ---- 翻页 ---- */
+.pager { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; margin: 14px 0 6px; }
+.pg {
+  border: 1px solid var(--line); background: var(--card); color: #6d675d;
+  border-radius: 10px; min-width: 36px; height: 34px; padding: 0 9px;
+  font-size: 13px; cursor: pointer;
 }
+.pg:active { background: var(--accent-soft); }
+.pg.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+.pg:disabled { opacity: .4; cursor: not-allowed; }
+.pg.dots { border: none; background: transparent; cursor: default; min-width: 16px; padding: 0; }
+.pager-hint { text-align: center; font-size: 12px; color: var(--muted); padding-bottom: 6px; }
 .toast {
   position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%);
   background: rgba(30, 25, 18, .92); color: #fff; font-size: 13px;

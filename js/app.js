@@ -16,8 +16,9 @@
     var state = {
       route: { page: 'recommend', id: null, q: {} },
       q: '',
-      category: '',
-      alcoholic: '',
+      tastes: [],
+      ingredients: [],
+      strength: '',
       page: 1,
       blind: { tierIds: [], tastes: [], alcoholic: '', result: null, lastId: null },
       tierDraft: null,
@@ -57,29 +58,45 @@
 
     /* ---------- 视图 ---------- */
     function currentFilters() {
-      return { q: state.q, category: state.category, alcoholic: state.alcoholic };
+      return {
+        q: state.q,
+        tastes: state.tastes,
+        ingredients: state.ingredients,
+        strength: state.strength
+      };
+    }
+
+    function hasFilter() {
+      return !!(state.q || state.tastes.length || state.ingredients.length || state.strength);
     }
 
     function filteredList() {
-      return core.filterRecipes(store.allRecipes(), currentFilters());
+      return core.filterRecipes(store.allRecipes(), currentFilters(), tags);
     }
 
     function recommendParts() {
       var list = filteredList();
-      var shown = core.pageSlice(list, state.page, PAGE_SIZE);
+      var totalPages = core.pageCount(list.length, PAGE_SIZE);
+      var page = Math.min(Math.max(1, state.page), totalPages);
+      var shown = core.pageItems(list, page, PAGE_SIZE);
       var opts = ui_lastRecommendOpts(list);
       return {
+        page: page,
+        totalPages: totalPages,
         listBox: ui.cardListHtml(shown, opts, tags),
-        footer: shown.length < list.length
-          ? '<button class="load-more" data-act="loadMore">继续加载（已显示 ' + shown.length + ' / ' + list.length + '）</button>'
-          : (list.length ? '<div class="more-hint">— 已到底，共 ' + list.length + ' 款 —</div>' : '')
+        footer: ui.pagerHtml(page, totalPages, list.length)
       };
     }
 
     function renderRecommend() {
-      var cats = core.uniqueCategories(store.allRecipes());
       var parts = recommendParts();
-      var html = ui.filterBarHtml({ q: state.q, category: state.category, alcoholic: state.alcoholic }, cats)
+      state.page = parts.page;
+      var html = ui.filterBarHtml({
+        q: state.q,
+        tastes: state.tastes,
+        ingredients: state.ingredients,
+        strength: state.strength
+      }, tags.commonIngredients(store.allRecipes(), 24), tags)
         + '<div id="listBox">' + parts.listBox + '</div>' + parts.footer;
       view().innerHTML = html;
       // 同步 listBox（Node 假 DOM 中与 view 分离；真实 DOM 中为幂等）
@@ -111,7 +128,7 @@
       return { empty: {
         ico: '🔍',
         text: list.length === 0 ? '未找到相关配方，换个关键词或清除筛选试试' : '配方库为空',
-        action: (state.q || state.category || state.alcoholic) ? { act: 'clearFilter', label: '清除筛选' } : null
+        action: hasFilter() ? { act: 'clearFilter', label: '清除筛选' } : null
       } };
     }
 
@@ -212,8 +229,9 @@
       state.route = r;
       if (r.page === 'recommend') {
         state.q = r.q.q || '';
-        state.category = r.q.category || '';
-        state.alcoholic = r.q.alcoholic || '';
+        state.tastes = r.q.tastes ? String(r.q.tastes).split(',') : [];
+        state.ingredients = r.q.ingredients ? String(r.q.ingredients).split(',') : [];
+        state.strength = r.q.strength || '';
         state.page = parseInt(r.q.page, 10) || 1;
       }
       if (r.page !== 'box') { state.blind.result = state.blind.result; }
@@ -318,8 +336,9 @@
       }
       closeOverlay();
       state.q = '';
-      state.category = '';
-      state.alcoholic = '';
+      state.tastes = [];
+      state.ingredients = [];
+      state.strength = '';
       state.page = 1;
       navigate(core.buildHash({ page: 'recommend', q: {} }));
       render();
@@ -388,24 +407,44 @@
           render();
           break;
         }
-        case 'cat':
-          state.category = state.category === el.getAttribute('data-val') ? '' : el.getAttribute('data-val');
+        case 'fTaste': {
+          var tv = el.getAttribute('data-val');
+          var ti = state.tastes.indexOf(tv);
+          if (ti === -1) state.tastes.push(tv); else state.tastes.splice(ti, 1);
+          state.page = 1;
+          render();
+          break;
+        }
+        case 'fIng': {
+          var iv = el.getAttribute('data-val');
+          var ii = state.ingredients.indexOf(iv);
+          if (ii === -1) state.ingredients.push(iv); else state.ingredients.splice(ii, 1);
+          state.page = 1;
+          render();
+          break;
+        }
+        case 'fStr':
+          state.strength = el.getAttribute('data-val');
           state.page = 1;
           render();
           break;
         case 'alc':
-          state.alcoholic = el.getAttribute('data-val');
-          state.page = 1;
+          state.blind.alcoholic = el.getAttribute('data-val');
+          state.blind.result = null;
           render();
           break;
         case 'clearFilter':
-          state.q = ''; state.category = ''; state.alcoholic = ''; state.page = 1;
+          state.q = ''; state.tastes = []; state.ingredients = []; state.strength = ''; state.page = 1;
           render();
           break;
-        case 'loadMore':
-          state.page += 1;
+        case 'gotoPage': {
+          var pg = parseInt(el.getAttribute('data-val'), 10);
+          if (!isFinite(pg)) break;
+          state.page = pg;
           renderRecommend();
+          if (view()) view().scrollTop = 0;
           break;
+        }
         case 'gotoRecommend':
           navigate('#/recommend');
           break;
@@ -541,6 +580,18 @@
           if (minIdx !== null) state.tierDraft[i].min = t.value;
           if (maxIdx !== null) state.tierDraft[i].max = t.value;
         }
+      });
+
+      // 筛选条横向胶囊：桌面端滚轮转横向滚动（触屏本来就支持手势）
+      doc.addEventListener('wheel', function (e) {
+        var el = e.target && e.target.closest ? e.target.closest('.chips.scroll') : null;
+        if (!el) return;
+        var overflow = (el.scrollWidth || 0) - (el.clientWidth || 0);
+        if (overflow <= 0) return;
+        var d = e.deltaY || e.deltaX || 0;
+        if (!d) return;
+        if (e.preventDefault) e.preventDefault();
+        el.scrollLeft = Math.max(0, Math.min(overflow, (el.scrollLeft || 0) + d));
       });
 
       doc.getElementById('btnSettings').addEventListener('click', function () {

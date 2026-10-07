@@ -35,17 +35,17 @@ test('全部 1384 条都能估算价格，且为 5~300 元整数', () => {
 test('已知配方的口感与价格方向正确', () => {
   const mojito = DRINKS.find((d) => d.name === 'Mojito');
   const t = Tags.deriveTastes(mojito);
-  assert.ok(t.includes('清爽') || t.includes('酸甜'), '莫吉托应偏清爽/酸甜: ' + t);
+  assert.ok(t.includes('清爽') || t.includes('酸'), '莫吉托应偏清爽/酸: ' + t);
 
   const margarita = DRINKS.find((d) => d.name === 'Margarita');
-  assert.ok(Tags.deriveTastes(margarita).includes('浓烈'), '玛格丽特应为浓烈');
+  assert.ok(Tags.deriveTastes(margarita).includes('酸'), '玛格丽特应含酸味');
 
-  // 含奶油的配方必须能打上奶香
-  const creamy = DRINKS.find((d) => Tags.deriveTastes(d).includes('奶香'));
-  assert.ok(creamy, '至少应有配方命中奶香');
-  // 含气泡的配方必须能打上气泡
-  const fizz = DRINKS.find((d) => Tags.deriveTastes(d).includes('气泡'));
-  assert.ok(fizz, '至少应有配方命中气泡');
+  // 含奶油的配方必须能打上浓郁
+  const creamy = DRINKS.find((d) => Tags.deriveTastes(d).includes('浓郁'));
+  assert.ok(creamy, '至少应有配方命中浓郁');
+  // 含气泡类配料的配方必须能打上清爽
+  const fizz = DRINKS.find((d) => Tags.deriveTastes(d).includes('清爽'));
+  assert.ok(fizz, '至少应有配方命中清爽');
 });
 
 test('价格：果汁类低于香槟类', () => {

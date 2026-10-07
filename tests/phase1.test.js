@@ -21,7 +21,7 @@ test('配方总数为 1384', () => {
 
 test('每条配方字段完整', () => {
   require(path.join(ROOT, 'js', 'data.js'));
-  const required = ['id', 'source', 'name', 'name_zh', 'name_display', 'ingredients_zh', 'instructions_zh'];
+  const required = ['id', 'name', 'name_zh', 'name_display', 'ingredients_zh', 'instructions_zh'];
   for (const d of globalThis.DRINKS) {
     for (const k of required) {
       assert.ok(d[k] !== undefined && d[k] !== null && d[k] !== '', `${d.id} 缺少字段 ${k}`);

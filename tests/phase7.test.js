@@ -70,7 +70,7 @@ test('所有 js 文件在 Node 中均可加载且导出 API', () => {
   const checks = [
     ['tags.js', ['deriveTastes', 'estimatePrice', 'defaultTiers', 'normalizeTiers', 'tierOf']],
     ['store.js', ['createStore']],
-    ['core.js', ['parseHash', 'buildHash', 'filterRecipes', 'pickRandom', 'pageSlice']],
+    ['core.js', ['parseHash', 'buildHash', 'filterRecipes', 'pickRandom', 'pageCount', 'pageItems']],
     ['ui.js', ['cardHtml', 'detailHtml', 'blindHtml', 'settingsHtml']],
     ['app.js', ['createApp']]
   ];

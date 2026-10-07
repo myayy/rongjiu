@@ -93,7 +93,6 @@
       var id = 'my-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
       var rec = {
         id: id,
-        source: 'custom',
         name: drink.name || name,
         name_zh: drink.name_zh || name,
         name_display: drink.name_display || name,
@@ -104,8 +103,7 @@
         ingredients_zh: drink.ingredients_zh.map(function (x) { return String(x); }),
         instructions_en: drink.instructions_en || '',
         instructions_zh: drink.instructions_zh || '',
-        image: '',
-        source_url: ''
+        image: ''
       };
       list.unshift(rec);
       write(KEYS.custom, list);

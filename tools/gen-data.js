@@ -16,7 +16,6 @@ function main() {
 
   const out = drinks.map((d) => ({
     id: d.id,
-    source: d.source,
     name: d.name,
     name_zh: d.name_zh,
     name_display: d.name_display,
@@ -27,8 +26,7 @@ function main() {
     ingredients_zh: Array.isArray(d.ingredients_zh) ? d.ingredients_zh : [],
     instructions_en: d.instructions_en || '',
     instructions_zh: d.instructions_zh || '',
-    image: d.image ? '素材/' + String(d.image).replace(/\\/g, '/') : '',
-    source_url: d.source_url || ''
+    image: d.image ? '素材/' + String(d.image).replace(/\\/g, '/') : ''
   }));
 
   const banner = '/* 自动生成：tools/gen-data.js — 请勿手工修改 */\n';

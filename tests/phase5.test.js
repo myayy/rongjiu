@@ -34,7 +34,7 @@ test('卡片渲染含名称/图/价格/加入酒柜按钮', () => {
 });
 
 test('自制配方卡片带「自制」标记', () => {
-  const custom = { ...mojito, id: 'my-x', source: 'custom', image: '' };
+  const custom = { ...mojito, id: 'my-x', image: '' };
   const html = UI.cardHtml(custom, {}, Tags);
   assert.ok(html.includes('自制'));
   assert.ok(html.includes('placeholder'), '无图配方应有占位图');
@@ -44,8 +44,7 @@ test('卡片内容对 XSS 输入做转义', () => {
   const evil = {
     id: 'x', name_display: '<script>alert(1)</script>', name_zh: 'a',
     category: '"><img>', alcoholic: 'Alcoholic', image: 'x" onerror="alert(1)',
-    ingredients_zh: ['<b>'], ingredients_en: [], instructions_zh: '', instructions_en: '',
-    source: 'custom'
+    ingredients_zh: ['<b>'], ingredients_en: [], instructions_zh: '', instructions_en: ''
   };
   const html = UI.cardHtml(evil, {}, Tags);
   assert.ok(!html.includes('<script>'));
@@ -60,7 +59,7 @@ test('列表为空时渲染空状态且带引导动作', () => {
   assert.ok(html.includes('data-act="gotoRecommend"'));
 });
 
-test('详情页含配料/做法/来源/价格档位', () => {
+test('详情页含配料/做法/价格档位，且不含任何来源信息', () => {
   const html = UI.detailHtml(mojito, { inCabinet: false, customTiers: null }, Tags);
   assert.ok(html.includes('配料'));
   assert.ok(html.includes('做法'));
@@ -68,35 +67,42 @@ test('详情页含配料/做法/来源/价格档位', () => {
   assert.ok(html.includes('加入酒柜'));
   assert.ok(html.includes('返回'));
   assert.ok(html.includes('约 '), '应显示估算价格');
-  assert.ok(html.includes('thecocktaildb'), '应有来源链接');
+  assert.ok(!html.includes('来源'), '不应出现来源区块');
+  assert.ok(!html.includes('href="http'), '不应出现任何外部链接');
+  assert.ok(!html.includes('rel="noopener"'), '不应出现来源外链');
   assert.ok(!html.includes('删除'), '非自制配方不显示删除');
 });
 
 test('自制配方详情显示删除按钮', () => {
-  const custom = { ...mojito, id: 'my-1', source: 'custom', image: '' };
+  const custom = { ...mojito, id: 'my-1', image: '' };
   const html = UI.detailHtml(custom, { inCabinet: true }, Tags);
   assert.ok(html.includes('data-act="delCustom"'));
   assert.ok(html.includes('点击移除'));
 });
 
-test('筛选栏渲染搜索框/酒精度/分类胶囊', () => {
-  const cats = Core.uniqueCategories(DRINKS).slice(0, 20);
-  const html = UI.filterBarHtml({ q: 'mojito', alcoholic: 'yes', category: cats[0] }, cats);
+test('筛选栏渲染搜索框/口味/材料/酒精强度', () => {
+  const ings = Tags.commonIngredients(DRINKS, 24);
+  const html = UI.filterBarHtml({ q: 'mojito', tastes: ['甜'], ingredients: [ings[0].name], strength: 'high' }, ings, Tags);
   assert.ok(html.includes('id="searchInput"'));
   assert.ok(html.includes('value="mojito"'));
-  assert.ok(html.includes('data-act="alc"'));
-  assert.ok(html.includes('data-act="cat"'));
-  assert.ok(html.includes('class="fchip on" data-act="cat" data-val="' + UI.esc(cats[0]) + '"'), '当前分类应高亮');
-  assert.ok(html.includes('含酒精'));
+  assert.ok(html.includes('口味'));
+  assert.ok(html.includes('材料'));
+  assert.ok(html.includes('酒精强度'));
+  assert.ok(html.includes('data-act="fTaste"'));
+  assert.ok(html.includes('data-act="fIng"'));
+  assert.ok(html.includes('data-act="fStr"'));
+  assert.ok(html.includes('class="fchip on" data-act="fTaste" data-val="甜"'), '当前口味应高亮');
+  assert.ok(html.includes('class="fchip on" data-act="fStr" data-val="high"'), '当前强度应高亮');
+  assert.ok(html.includes('无酒精') && html.includes('低度') && html.includes('高度'));
 });
 
 test('盲盒页渲染档位/口感/酒精度与结果区', () => {
   const tiers = Tags.defaultTiers();
   const pool = Core.buildBlindPool(DRINKS, { tierIds: [], tastes: [] }, Tags);
-  const html = UI.blindHtml({ pool, tierIds: ['t0', 't1'], tastes: ['浓烈'], alcoholic: '' }, tiers, Tags);
+  const html = UI.blindHtml({ pool, tierIds: ['t0', 't1'], tastes: ['甜'], alcoholic: '' }, tiers, Tags);
   assert.ok(html.includes('价格档位'));
   assert.ok(html.includes('可自定义'));
-  assert.ok(html.includes('浓烈'));
+  assert.ok(html.includes('咖啡'));
   assert.ok(html.includes('符合条件：' + pool.length + ' 款'));
   assert.ok(html.includes('data-act="blindDraw"'));
   assert.ok(html.includes('data-act="tier"'));
@@ -142,12 +148,13 @@ test('价格档位编辑器支持增删改', () => {
   assert.ok(html.includes('placeholder="最高(留空=不限)"'));
 });
 
-test('关于页保留两家数据源署名', () => {
+test('关于页不含任何数据来源信息', () => {
   const html = UI.aboutHtml();
-  assert.ok(html.includes('TheCocktailDB'));
-  assert.ok(html.includes('opendrinks'));
-  assert.ok(html.includes('MIT'));
-  assert.ok(html.includes('非商业'));
+  assert.ok(!html.includes('来源'), '不应出现「来源」字样');
+  assert.ok(!html.includes('TheCocktailDB'));
+  assert.ok(!html.includes('thecocktaildb'));
+  assert.ok(!html.includes('opendrinks'));
+  assert.ok(!html.includes('署名'));
 });
 
 test('导入弹层提供合并/覆盖两种模式', () => {

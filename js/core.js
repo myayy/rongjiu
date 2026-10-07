@@ -63,6 +63,14 @@
     if (filters.category) {
       if (String(drink.category || '') !== filters.category) return false;
     }
+    if (filters.strength && tagsApi && tagsApi.strength(drink) !== filters.strength) return false;
+    if (filters.ingredients && filters.ingredients.length && tagsApi) {
+      var hit = false;
+      for (var i = 0; i < filters.ingredients.length; i++) {
+        if (tagsApi.hasIngredient(drink, filters.ingredients[i])) { hit = true; break; }
+      }
+      if (!hit) return false;
+    }
     return true;
   }
 
@@ -100,11 +108,23 @@
     return out;
   }
 
-  /* ----- 分页（滚动加载） ----- */
-  function pageSlice(list, page, size) {
-    var p = Math.max(1, parseInt(page, 10) || 1);
-    var n = Math.max(1, parseInt(size, 10) || 30);
-    return list.slice(0, p * n);
+  /* ----- 分页（按页翻，像小说翻页） ----- */
+  function pageSizeN(size) {
+    return Math.max(1, parseInt(size, 10) || 30);
+  }
+
+  function pageCount(total, size) {
+    var n = pageSizeN(size);
+    var t = Math.max(0, parseInt(total, 10) || 0);
+    return Math.max(1, Math.ceil(t / n));
+  }
+
+  function pageItems(list, page, size) {
+    var n = pageSizeN(size);
+    var total = pageCount(list.length, n);
+    var p = Math.min(Math.max(1, parseInt(page, 10) || 1), total);
+    var start = (p - 1) * n;
+    return list.slice(start, start + n);
   }
 
   /* ----- 盲盒 ----- */
@@ -128,7 +148,8 @@
     matchesQuery: matchesQuery,
     filterRecipes: filterRecipes,
     uniqueCategories: uniqueCategories,
-    pageSlice: pageSlice,
+    pageCount: pageCount,
+    pageItems: pageItems,
     buildBlindPool: buildBlindPool,
     pickRandom: pickRandom
   };

@@ -86,19 +86,19 @@ test('盲盒：档位 + 口感筛选池非空且命中条件', () => {
   ]);
   const pool = Core.buildBlindPool(DRINKS, {
     tierIds: [tiers[0].id],
-    tastes: ['浓烈'],
+    tastes: ['甜'],
     customTiers: tiers
   }, Tags);
   assert.ok(pool.length > 10, `池应非空，实际 ${pool.length}`);
   for (const d of pool) {
     const tier = Tags.tierOf(Tags.estimatePrice(d), tiers);
     assert.equal(tier.id, tiers[0].id, `${d.id} 档位不符`);
-    assert.ok(Tags.deriveTastes(d).includes('浓烈'), `${d.id} 口感不符`);
+    assert.ok(Tags.deriveTastes(d).includes('甜'), `${d.id} 口感不符`);
   }
 });
 
 test('盲盒：条件全部满足时池为空有明确结果（不抛异常）', () => {
-  const pool = Core.buildBlindPool(DRINKS, { q: 'zzz不存在zzz', tastes: ['气泡'] }, Tags);
+  const pool = Core.buildBlindPool(DRINKS, { q: 'zzz不存在zzz', tastes: ['甜'] }, Tags);
   assert.equal(pool.length, 0);
   assert.equal(Core.pickRandom(pool), null);
 });
@@ -115,14 +115,17 @@ test('盲盒：pickRandom 支持排除上次结果', () => {
   assert.equal(Core.pickRandom([]), null);
 });
 
-test('分页：pageSlice 递增且不越界', () => {
-  assert.equal(Core.pageSlice(DRINKS, 1, 30).length, 30);
-  assert.equal(Core.pageSlice(DRINKS, 2, 30).length, 60);
-  assert.equal(Core.pageSlice(DRINKS, 9999, 30).length, 1384);
-  assert.equal(Core.pageSlice(DRINKS, 'x', 30).length, 30, '非法页码按第 1 页');
-  assert.equal(Core.pageSlice([], 1, 30).length, 0);
-  const s = Core.pageSlice(DRINKS, 2, 30);
-  assert.equal(s[59].id, DRINKS[59].id);
+test('分页：pageCount / pageItems 按页翻且不越界', () => {
+  assert.equal(Core.pageCount(1384, 30), 47);
+  assert.equal(Core.pageCount(0, 30), 1);
+  assert.equal(Core.pageCount(60, 30), 2);
+
+  assert.equal(Core.pageItems(DRINKS, 1, 30).length, 30);
+  assert.equal(Core.pageItems(DRINKS, 2, 30).length, 30);
+  assert.equal(Core.pageItems(DRINKS, 2, 30)[0].id, DRINKS[30].id, '第 2 页从第 31 条开始');
+  assert.equal(Core.pageItems(DRINKS, 9999, 30).length, 4, '超出末页则落到末页（1384 = 46×30 + 4）');
+  assert.equal(Core.pageItems(DRINKS, 'x', 30).length, 30, '非法页码按第 1 页');
+  assert.equal(Core.pageItems([], 1, 30).length, 0);
 });
 
 test('id 可通过 buildHash 定位到详情页', () => {

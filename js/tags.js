@@ -2,19 +2,20 @@
 (function (global) {
   'use strict';
 
-  /* ---------- 口感规则：正则命中即打标签 ---------- */
+  /* ---------- 口感规则：正则命中即打标签（依据 PRO.md 5.4 的 9 类） ---------- */
   var TASTE_RULES = [
-    { tag: '浓烈', re: /伏特加|金酒|杜松子酒|朗姆|威士忌|波本|龙舌兰|白兰地|干邑|苦艾|烈酒|151|vodka|gin|rum|whisk(e)?y|bourbon|tequila|brandy|cognac/i },
-    { tag: '清爽', re: /苏打|气泡|汤力|姜汁|柠檬|青柠|薄荷|冰|雪碧|七喜|soda|tonic|ginger|lime|lemon|mint|ice|sprite/i },
-    { tag: '酸甜', re: /柠檬汁|青柠汁|酸|糖浆|红石榴|蜂蜜|糖|果汁|糖水|sour|syrup|honey|sugar|grenadine/i },
-    { tag: '果香', re: /橙|菠萝|芒果|草莓|西瓜|葡萄|苹果|桃|椰|浆果|柠檬|青柠|西柚|果汁|杏|樱桃|香蕉|pineapple|mango|orange|apple|coconut|juice|berry/i },
-    { tag: '奶香', re: /奶油|牛奶|椰奶|炼乳|酸奶|奶|蛋清|cream|milk|yogurt|yoghurt|egg white/i },
-    { tag: '苦味', re: /苦精|金巴利|苦艾|阿佩罗|咖啡|巧克力|可可|茶|campari|aperol|bitter|espresso|coffee|cocoa|chocolate|tea/i },
-    { tag: '气泡', re: /苏打|气泡|香槟|可乐|起泡|香槟|champagne|sparkling|cola|soda|prosecco|cava/i },
-    { tag: '草本', re: /薄荷|罗勒|迷迭香|百里香|茴香|八角|香草|芫荽|罗勒|mint|basil|rosemary|thyme|anise|vanilla|herb/i }
+    { tag: '甜', re: /糖|蜂蜜|红石榴|甜味美思|君度|白橙皮酒|杏仁酒|阿玛雷托|咖啡利口酒|百利甜|可可甜酒|蓝橙|桃味|马拉斯奇诺|桑布卡|枫糖|龙舌兰糖浆|sugar|syrup|grenadine|honey|sweet vermouth|triple sec|amaretto|kahlua|baileys|creme de cacao|blue curacao|peach schnapps|maraschino|sambuca|cointreau|maple|agave/i },
+    { tag: '酸', re: /酸味|酸甜|酸橙|青柠|柠檬|西柚|葡萄柚|柚子|lime|lemon|grapefruit|sour|yuzu/i },
+    { tag: '苦', re: /苦精|苦味|金巴利|阿佩罗|费内特|阿玛罗|西娜|苏兹|比特酒|安高天娜|bitters|angostura|campari|aperol|fernet|amaro|cynar|suze/i },
+    { tag: '清爽', re: /苏打|气泡|汤力|通宁|姜汁|姜啤|薄荷|黄瓜|罗勒|柠檬水|雪碧|七喜|可乐|soda water|tonic|club soda|sparkling|ginger ale|ginger beer|mint|cucumber|basil|lemonade/i },
+    { tag: '浓郁', re: /奶油|牛奶|椰奶|炼乳|酸奶|蛋|冰淇淋|巧克力|甘露|cream|milk|egg|baileys|kahlua|chocolate|ice cream|yogurt|coconut milk/i },
+    { tag: '果味', re: /橙汁|菠萝汁|蔓越莓汁|苹果汁|草莓|芒果|桃|香蕉|樱桃|百香果|石榴|果汁|葡萄|西瓜|蓝莓|覆盆子|orange juice|pineapple juice|cranberry juice|apple juice|strawberry|mango|peach|banana|cherry|passion fruit|pomegranate|berry|grape|watermelon|raspberry|blueberry/i },
+    { tag: '辛香', re: /姜|肉桂|豆蔻|丁香|胡椒|辣椒|茴香|八角|ginger|cinnamon|nutmeg|clove|pepper|chili|cardamom|anise|fennel/i },
+    { tag: '咖啡', re: /咖啡|冷萃|提亚玛丽亚|coffee|espresso|cold brew|kahlua|tia maria/i },
+    { tag: '茶', re: /茶叶|茶汤|红茶|绿茶|白茶|伯爵茶|抹茶|乌龙茶|奶茶|柠檬茶|茶包|\btea\b|chai|matcha|earl grey|green tea|black tea/i }
   ];
 
-  var ALL_TASTE_TAGS = ['浓烈', '清爽', '酸甜', '果香', '奶香', '苦味', '气泡', '草本'];
+  var ALL_TASTE_TAGS = ['甜', '酸', '苦', '清爽', '浓郁', '果味', '辛香', '咖啡', '茶'];
 
   function tasteText(drink) {
     var parts = [];
@@ -30,9 +31,66 @@
       if (TASTE_RULES[i].re.test(text)) out.push(TASTE_RULES[i].tag);
     }
     if (out.length === 0) {
-      out.push(String(drink.alcoholic || '').toLowerCase().indexOf('non') === 0 ? '清爽' : '浓烈');
+      out.push(String(drink.alcoholic || '').toLowerCase().indexOf('non') === 0 ? '清爽' : '浓郁');
     }
     return out;
+  }
+
+  /* ---------- 酒精强度：数据无 ABV，按配料自动分档 ---------- */
+  var SPIRIT_RE = /伏特加|金酒|杜松子酒|朗姆|威士忌|波本|龙舌兰|白兰地|干邑|苦艾酒|清酒|烧酒|烈酒|生命之水|151|\bvodka\b|\bgin\b|\brum\b|whisk(e)?y|bourbon|tequila|brandy|cognac|absinthe|\bsake\b|everclear/i;
+
+  var STRENGTHS = [
+    { id: 'none', label: '无酒精' },
+    { id: 'low', label: '低度' },
+    { id: 'high', label: '高度' }
+  ];
+
+  function strength(drink) {
+    if (/^non/i.test(String(drink.alcoholic || ''))) return 'none';
+    return SPIRIT_RE.test(tasteText(drink)) ? 'high' : 'low';
+  }
+
+  /* ---------- 常见材料：从配料名自动汇总 ---------- */
+  var ING_STOP = { '冰块': 1, '冰': 1, '水': 1 };
+
+  function ingredientName(raw) {
+    return String(raw === undefined || raw === null ? '' : raw)
+      .replace(/[（(].*$/, '')
+      .replace(/^[\d.]+\s*(毫升|毫昇|克|盎司|大勺|小勺|汤匙|茶匙|勺|杯|份|滴|片|个|块|oz|ml|cl|dash|tsp|tbsp|cup|slice|splash|part|shot|jigger)\s*/i, '')
+      .trim();
+  }
+
+  function ingredientNames(drink) {
+    var arr = Array.isArray(drink.ingredients_zh) ? drink.ingredients_zh : [];
+    var out = [];
+    for (var i = 0; i < arr.length; i++) {
+      var n = ingredientName(arr[i]);
+      if (n && out.indexOf(n) === -1) out.push(n);
+    }
+    return out;
+  }
+
+  function commonIngredients(list, topN) {
+    var count = {};
+    (list || []).forEach(function (d) {
+      ingredientNames(d).forEach(function (n) {
+        if (ING_STOP[n]) return;
+        count[n] = (count[n] || 0) + 1;
+      });
+    });
+    return Object.keys(count).sort(function (a, b) {
+      return count[b] - count[a] || a.localeCompare(b, 'zh');
+    }).slice(0, topN || 24).map(function (n) {
+      return { name: n, count: count[n] };
+    });
+  }
+
+  function hasIngredient(drink, name) {
+    var names = ingredientNames(drink);
+    for (var i = 0; i < names.length; i++) {
+      if (names[i].indexOf(name) !== -1) return true;
+    }
+    return false;
   }
 
   /* ---------- 价格估算（元/杯）：同组取最高，跨组累加 ---------- */
@@ -125,7 +183,13 @@
     ALL_TASTE_TAGS: ALL_TASTE_TAGS,
     TASTE_RULES: TASTE_RULES,
     PRICE_RULES: PRICE_RULES,
+    STRENGTHS: STRENGTHS,
     deriveTastes: deriveTastes,
+    strength: strength,
+    ingredientName: ingredientName,
+    ingredientNames: ingredientNames,
+    commonIngredients: commonIngredients,
+    hasIngredient: hasIngredient,
     estimatePrice: estimatePrice,
     defaultTiers: defaultTiers,
     normalizeTiers: normalizeTiers,

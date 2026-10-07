@@ -15,6 +15,10 @@
     return '<div class="' + cls + ' placeholder">🍸</div>';
   }
 
+  function isCustom(drink) {
+    return String(drink.id || '').indexOf('my-') === 0;
+  }
+
   function priceOf(drink, tagsApi) {
     return tagsApi.estimatePrice(drink);
   }
@@ -29,7 +33,7 @@
       + (String(drink.alcoholic).indexOf('Non') === 0 ? '无酒精' : '含酒精') + '</span>';
     chips += '<span class="chip">' + price + '元</span>';
     chips += '<span class="chip">' + esc(tastes[0]) + (tastes.length > 1 ? '等' : '') + '</span>';
-    if (drink.source === 'custom') chips += '<span class="chip accent">自制</span>';
+    if (isCustom(drink)) chips += '<span class="chip accent">自制</span>';
 
     var heart = opts.compact ? '' :
       '<div class="card-actions"><button class="heart' + (inCab ? ' on' : '') + '" data-act="toggle" data-id="'
@@ -79,28 +83,79 @@
       + '<div class="detail-name">' + esc(drink.name_display) + '</div>'
       + '<div class="kv">' + kv + '</div>'
       + '<div class="btn-row">' + cabBtn
-      + (drink.source === 'custom'
+      + (isCustom(drink)
         ? '<button class="btn danger" data-act="delCustom" data-id="' + esc(drink.id) + '">删除</button>'
         : '')
       + '</div>'
       + '<div class="detail-section"><h3>配料</h3><ul>' + (ings || '<li>未填写</li>') + '</ul></div>'
       + '<div class="detail-section"><h3>做法</h3><p>' + esc(drink.instructions_zh || '未填写') + '</p></div>'
-      + (drink.instructions_en ? '<div class="detail-section"><h3>做法（英文原文）</h3><p>' + esc(drink.instructions_en) + '</p></div>' : '')
-      + (drink.source_url ? '<div class="detail-section"><h3>来源</h3><p><a href="' + esc(drink.source_url) + '" target="_blank" rel="noopener">' + esc(drink.source_url) + '</a></p></div>' : '');
+      + (drink.instructions_en ? '<div class="detail-section"><h3>做法（英文原文）</h3><p>' + esc(drink.instructions_en) + '</p></div>' : '');
   }
 
-  function filterBarHtml(state, categories) {
-    var chips = categories.map(function (c) {
-      return '<button class="fchip' + (state.category === c ? ' on' : '') + '" data-act="cat" data-val="' + esc(c) + '">' + esc(c) + '</button>';
+  function filterGroup(label, chips) {
+    if (!chips) return '';
+    return '<div class="fgroup"><div class="fgroup-label">' + esc(label) + '</div>'
+      + '<div class="chips scroll">' + chips + '</div></div>';
+  }
+
+  function filterBarHtml(state, ingredients, tagsApi) {
+    var myTastes = state.tastes || [];
+    var tasteChips = tagsApi.ALL_TASTE_TAGS.map(function (t) {
+      var on = myTastes.indexOf(t) !== -1;
+      return '<button class="fchip' + (on ? ' on' : '') + '" data-act="fTaste" data-val="' + esc(t) + '">' + esc(t) + '</button>';
     }).join('');
-    var alc = [['', '全部'], ['yes', '含酒精'], ['no', '无酒精']].map(function (p) {
-      return '<button class="fchip' + ((state.alcoholic || '') === p[0] ? ' on' : '') + '" data-act="alc" data-val="' + esc(p[0]) + '">' + p[1] + '</button>';
+
+    var myIngs = state.ingredients || [];
+    var ingChips = (ingredients || []).map(function (it) {
+      var on = myIngs.indexOf(it.name) !== -1;
+      return '<button class="fchip' + (on ? ' on' : '') + '" data-act="fIng" data-val="' + esc(it.name) + '">' + esc(it.name) + '</button>';
     }).join('');
+
+    var strChips = [{ id: '', label: '不限' }].concat(tagsApi.STRENGTHS).map(function (s) {
+      var on = (state.strength || '') === s.id;
+      return '<button class="fchip' + (on ? ' on' : '') + '" data-act="fStr" data-val="' + esc(s.id) + '">' + esc(s.label) + '</button>';
+    }).join('');
+
     return '<div class="filterbar">'
       + '<input class="search" type="text" id="searchInput" placeholder="搜索中文名 / 英文名 / 配料…" value="' + esc(state.q || '') + '">'
-      + '<div class="chips">' + alc + '</div>'
-      + (chips ? '<div class="chips scroll">' + chips + '</div>' : '')
+      + filterGroup('口味', tasteChips)
+      + filterGroup('材料', ingChips)
+      + filterGroup('酒精强度', strChips)
       + '</div>';
+  }
+
+  /* ---- 翻页（像小说一样按页码翻） ---- */
+  function pageWindow(page, total) {
+    var out = [];
+    var i;
+    if (total <= 7) {
+      for (i = 1; i <= total; i++) out.push(i);
+      return out;
+    }
+    out.push(1);
+    var start = Math.max(2, page - 1);
+    var end = Math.min(total - 1, page + 1);
+    if (start > 2) out.push('…');
+    for (i = start; i <= end; i++) out.push(i);
+    if (end < total - 1) out.push('…');
+    out.push(total);
+    return out;
+  }
+
+  function pagerHtml(page, totalPages, totalCount) {
+    if (totalPages <= 1) {
+      return totalCount ? '<div class="pager-hint">共 ' + totalCount + ' 款</div>' : '';
+    }
+    var nums = pageWindow(page, totalPages).map(function (p) {
+      if (p === '…') return '<span class="pg dots">…</span>';
+      return '<button class="pg' + (p === page ? ' on' : '') + '" data-act="gotoPage" data-val="' + p + '">' + p + '</button>';
+    }).join('');
+    return '<div class="pager">'
+      + '<button class="pg nav" data-act="gotoPage" data-val="' + (page - 1) + '"' + (page <= 1 ? ' disabled' : '') + '>上一页</button>'
+      + nums
+      + '<button class="pg nav" data-act="gotoPage" data-val="' + (page + 1) + '"' + (page >= totalPages ? ' disabled' : '') + '>下一页</button>'
+      + '</div>'
+      + '<div class="pager-hint">第 ' + page + ' / ' + totalPages + ' 页 · 共 ' + totalCount + ' 款</div>';
   }
 
   /* ---- 盲盒 ---- */
@@ -163,7 +218,7 @@
       + '<div class="menu-item" data-act="export"><span>⬇ 导出备份</span><span class="val">JSON 文件</span></div>'
       + '<div class="menu-item" data-act="import"><span>⬆ 导入备份</span><span class="val">合并 / 覆盖</span></div>'
       + '<div class="menu-item" data-act="tiers"><span>¥ 价格档位</span><span class="val">' + (opts.tierCount || 3) + ' 档 · 可自定义</span></div>'
-      + '<div class="menu-item" data-act="about"><span>ⓘ 关于与数据来源</span><span class="val"></span></div>'
+      + '<div class="menu-item" data-act="about"><span>ⓘ 关于</span><span class="val"></span></div>'
       + '<div class="menu-item danger" data-act="clearAll"><span>🗑 清空全部数据</span><span class="val">酒柜 + 自制</span></div>'
       + '<div class="btn-row"><button class="btn subtle" data-act="closeOverlay">关闭</button></div>'
       + '</div>';
@@ -190,10 +245,8 @@
   function aboutHtml() {
     return '<div class="sheet about"><h2>关于 · 融酒</h2>'
       + '<p>纯本地运行的调酒助手：不联网、不登录、数据只存在本机浏览器里。刷新、关闭、重启都不丢；建议定期「导出备份」。</p>'
-      + '<p><b>数据来源与署名</b></p>'
-      + '<p>· TheCocktailDB（https://www.thecocktaildb.com/）— 免费开放 API，非商业 / 学习用途，需保留署名。</p>'
-      + '<p>· Open Drinks（https://github.com/alfg/opendrinks）— MIT 许可。</p>'
-      + '<p>仅限个人本地自用，请勿公开上架或商用。价格为规则估算，仅供盲盒分档参考；用量单位保留原文，未做统一换算。</p>'
+      + '<p>价格为规则估算，仅供盲盒分档参考；用量单位保留原文，未做统一换算。</p>'
+      + '<p>仅限个人本地自用。</p>'
       + '<div class="btn-row"><button class="btn" data-act="closeOverlay">知道了</button></div></div>';
   }
 
@@ -215,6 +268,7 @@
     emptyHtml: emptyHtml,
     detailHtml: detailHtml,
     filterBarHtml: filterBarHtml,
+    pagerHtml: pagerHtml,
     blindHtml: blindHtml,
     addFormHtml: addFormHtml,
     settingsHtml: settingsHtml,
