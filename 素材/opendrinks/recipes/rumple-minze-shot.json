@@ -1,0 +1,14 @@
+{
+  "name": "Rumple Minze Shot",
+  "description": "A very strong peppermint schnapps shot served ice-cold.",
+  "github": "opendrinks",
+  "ingredients": [
+    { "quantity": "1 1/2", "measure": "oz", "ingredient": "Peppermint schnapps" }
+  ],
+  "directions": [
+    "Chill the schnapps (or the bottle) well.",
+    "Pour into a shot glass and serve."
+  ],
+  "image": "peppermint-bark-mimosa.jpg",
+  "keywords": ["shot", "schnapps", "peppermint", "strong", "alcoholic"]
+}

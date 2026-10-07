@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>融酒 · 本地调酒助手</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="phone" class="phone">
+  <header class="topbar">
+    <h1 id="pageTitle">推荐</h1>
+    <button id="btnSettings" class="icon-btn" title="设置" aria-label="设置">⚙</button>
+  </header>
+
+  <main id="view" class="view"></main>
+
+  <nav class="tabbar">
+    <a href="#/recommend" data-tab="recommend" class="tab"><span class="tab-ico">🍸</span><span>推荐</span></a>
+    <a href="#/cabinet" data-tab="cabinet" class="tab"><span class="tab-ico">🗄</span><span>酒柜</span></a>
+    <a href="#/box" data-tab="box" class="tab"><span class="tab-ico">🎁</span><span>盲盒</span></a>
+  </nav>
+
+  <div id="overlay" class="overlay hidden"></div>
+  <div id="toast" class="toast hidden"></div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/tags.js"></script>
+<script src="js/store.js"></script>
+<script src="js/core.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

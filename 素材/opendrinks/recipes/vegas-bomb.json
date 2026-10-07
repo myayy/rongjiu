@@ -1,0 +1,18 @@
+{
+  "name": "Vegas Bomb",
+  "description": "A popular bomb-style shot with whiskey and peach schnapps dropped into an energy drink.",
+  "github": "opendrinks",
+  "ingredients": [
+    { "quantity": "1/2", "measure": "oz", "ingredient": "Canadian whisky" },
+    { "quantity": "1/2", "measure": "oz", "ingredient": "Peach schnapps" },
+    { "quantity": "1/2", "measure": "oz", "ingredient": "Coconut rum" },
+    { "quantity": "", "measure": "", "ingredient": "Energy drink" }
+  ],
+  "directions": [
+    "Combine the whisky, peach schnapps, and coconut rum in a shot glass.",
+    "Fill a separate glass with a small amount of energy drink.",
+    "Drop the shot into the energy drink and drink immediately."
+  ],
+  "image": "jagerbomb.jpg",
+  "keywords": ["shot", "bomb", "whiskey", "schnapps", "rum", "energy drink", "alcoholic"]
+}

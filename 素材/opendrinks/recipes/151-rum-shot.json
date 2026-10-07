@@ -1,0 +1,14 @@
+{
+  "name": "151 Rum Shot",
+  "description": "A high-proof rum shot — strong and best sipped carefully.",
+  "github": "opendrinks",
+  "ingredients": [
+    { "quantity": "1", "measure": "oz", "ingredient": "151-proof rum" }
+  ],
+  "directions": [
+    "Pour the rum into a shot glass.",
+    "Serve immediately."
+  ],
+  "image": "rum-punch.jpg",
+  "keywords": ["shot", "rum", "high-proof", "strong", "alcoholic"]
+}

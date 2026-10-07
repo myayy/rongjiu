@@ -1,0 +1,18 @@
+{
+  "name": "Birthday Cake Shot",
+  "description": "A sweet party shot with vanilla notes, inspired by classic birthday cake flavors.",
+  "github": "opendrinks",
+  "ingredients": [
+    { "quantity": "1", "measure": "oz", "ingredient": "Vanilla vodka" },
+    { "quantity": "1", "measure": "oz", "ingredient": "Amaretto" },
+    { "quantity": "", "measure": "", "ingredient": "Ice" }
+  ],
+  "directions": [
+    "Fill a shaker with ice.",
+    "Add vanilla vodka and amaretto.",
+    "Shake and strain into a shot glass.",
+    "Serve immediately."
+  ],
+  "image": "oreo-frappe.jpg",
+  "keywords": ["shot", "vodka", "sweet", "dessert", "amaretto", "alcoholic"]
+}

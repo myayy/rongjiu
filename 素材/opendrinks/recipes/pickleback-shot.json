@@ -1,0 +1,16 @@
+{
+  "name": "Pickleback Shot",
+  "description": "A two-part shooter: whiskey followed by a pickle juice chaser.",
+  "github": "opendrinks",
+  "ingredients": [
+    { "quantity": "1 1/2", "measure": "oz", "ingredient": "Whiskey" },
+    { "quantity": "1 1/2", "measure": "oz", "ingredient": "Pickle juice" }
+  ],
+  "directions": [
+    "Pour whiskey into one shot glass.",
+    "Pour pickle juice into a second shot glass.",
+    "Shoot the whiskey, then chase with the pickle juice."
+  ],
+  "image": "whiskey-highball.jpg",
+  "keywords": ["shot", "whiskey", "pickle", "easy", "alcoholic"]
+}

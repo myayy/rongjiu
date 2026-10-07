@@ -1,0 +1,50 @@
+{
+    "name": "Salty Grapefruit Refresher",
+    "description": "A bright and citrusy mocktail made with grapefruit juice, preserved lemon purée, and a splash of club soda.",
+    "github": "<hurlg1>",
+    "ingredients": [
+        {
+            "quantity": "2",
+            "measure": "teaspoon",
+            "ingredient": "preserved lemon purée"
+        },
+        {
+            "quantity": "1 1/2",
+            "measure": "cups",
+            "ingredient": "fresh grapefruit juice"
+        },
+        {
+            "quantity": "1",
+            "measure": "tablespoon",
+            "ingredient": "fresh lime juice"
+        },
+        {
+            "quantity": "to top",
+            "measure": "club soda",
+            "ingredient": "club soda"
+        },
+        {
+            "quantity": "1",
+            "measure": "wheel",
+            "ingredient": "grapefruit wheel (for serving)"
+        },
+        {
+            "quantity": "1",
+            "measure": "wheel",
+            "ingredient": "lime wheel (for serving)"
+        }
+    ],
+    "directions": [
+        "Stir together the preserved lemon purée, grapefruit juice, and lime juice until well combined.",
+        "Pour over ice and top with club soda.",
+        "Garnish with a grapefruit wheel and a lime wheel."
+    ],
+    "image": "salty-grapefruit-refresher.jpg",
+    "keywords": [
+        "mocktail",
+        "grapefruit",
+        "preserved lemon",
+        "refreshing",
+        "non-alcoholic"
+    ]
+}

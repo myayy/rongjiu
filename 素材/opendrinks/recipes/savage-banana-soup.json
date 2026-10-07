@@ -1,0 +1,59 @@
+{
+    "name": "Savage Banana Soup",
+    "description": "A smoothie that bites back!",
+    "github": "PatrickLohan",
+    "ingredients": [
+        {
+            "quantity": "50",
+            "measure": "g",
+            "ingredient": "Spinach or Kale"
+        },
+        {
+            "quantity": "10",
+            "measure": "g",
+            "ingredient": "Ground Ginger"
+        },
+        {
+            "quantity": "30",
+            "measure": "g",
+            "ingredient": "Peanut Butter"
+        },
+        {
+            "quantity": "10",
+            "measure": "g",
+            "ingredient": "Ground Flax/Linseed"
+        },
+        {
+            "quantity": "200",
+            "measure": "g",
+            "ingredient": "Banana, ripe"
+        },
+        {
+            "quantity": "50",
+            "measure": "g",
+            "ingredient": "Blueberries"
+        },
+        {
+            "quantity": "300",
+            "measure": "ml",
+            "ingredient": "Almond/Coconut Milk"
+        }
+    ],
+    "directions": [
+        "Put spinach/kale in bottom of a smoothie maker.",
+        "Add ginger, peanut butter, and flax/linseed.",
+        "Bananas and blueberries go on top, followed by the milk.",
+        "Blend.",
+        "Enjoy! Go get 'em, tiger!'"
+    ],
+    "image": "savage-banana-soup.jpg",
+    "keywords": [
+        "banana",
+        "kale",
+        "ginger",
+        "fruit",
+        "vegan",
+        "plant-based",
+        "milk"
+    ]
+}

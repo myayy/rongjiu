@@ -1,0 +1,19 @@
+{
+  "name": "Caramel Apple Shot",
+  "description": "A sweet fall-style shot combining caramel and apple flavors.",
+  "github": "opendrinks",
+  "ingredients": [
+    { "quantity": "1", "measure": "oz", "ingredient": "Caramel vodka" },
+    { "quantity": "1", "measure": "oz", "ingredient": "Sour apple schnapps" },
+    { "quantity": "1/2", "measure": "oz", "ingredient": "Apple juice" },
+    { "quantity": "", "measure": "", "ingredient": "Ice" }
+  ],
+  "directions": [
+    "Fill a shaker with ice.",
+    "Add caramel vodka, sour apple schnapps, and apple juice.",
+    "Shake and strain into a shot glass.",
+    "Serve immediately."
+  ],
+  "image": "caramel-frappuccino.jpg",
+  "keywords": ["shot", "sweet", "vodka", "apple", "caramel", "alcoholic"]
+}

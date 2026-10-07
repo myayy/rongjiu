@@ -1,0 +1,16 @@
+{
+  "name": "Buttery Nipple",
+  "description": "A sweet, creamy shot made with butterscotch schnapps and Irish cream.",
+  "github": "opendrinks",
+  "ingredients": [
+    { "quantity": "1", "measure": "oz", "ingredient": "Butterscotch schnapps" },
+    { "quantity": "1", "measure": "oz", "ingredient": "Irish cream" }
+  ],
+  "directions": [
+    "Pour the butterscotch schnapps into a shot glass.",
+    "Slowly float the Irish cream on top by pouring over the back of a spoon.",
+    "Serve immediately."
+  ],
+  "image": "baby-guinness.jpg",
+  "keywords": ["shot", "sweet", "cream", "butterscotch", "layered", "alcoholic"]
+}

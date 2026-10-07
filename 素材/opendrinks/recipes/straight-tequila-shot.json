@@ -1,0 +1,14 @@
+{
+  "name": "Straight Tequila Shot",
+  "description": "A simple tequila shot served neat, often with salt and lime on the side.",
+  "github": "opendrinks",
+  "ingredients": [
+    { "quantity": "1 1/2", "measure": "oz", "ingredient": "Tequila" }
+  ],
+  "directions": [
+    "Pour tequila into a shot glass.",
+    "Serve neat (optional: with salt and a lime wedge on the side)."
+  ],
+  "image": "tequila-sunrise.jpg",
+  "keywords": ["shot", "tequila", "simple", "strong", "alcoholic"]
+}

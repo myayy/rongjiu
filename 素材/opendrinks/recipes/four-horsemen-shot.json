@@ -1,0 +1,17 @@
+{
+  "name": "Four Horsemen Shot",
+  "description": "A strong equal-parts shot made with four different spirits.",
+  "github": "opendrinks",
+  "ingredients": [
+    { "quantity": "1/4", "measure": "oz", "ingredient": "Bourbon" },
+    { "quantity": "1/4", "measure": "oz", "ingredient": "Tennessee whiskey" },
+    { "quantity": "1/4", "measure": "oz", "ingredient": "Scotch whisky" },
+    { "quantity": "1/4", "measure": "oz", "ingredient": "Tequila" }
+  ],
+  "directions": [
+    "Pour all spirits into a shot glass.",
+    "Serve immediately."
+  ],
+  "image": "killer.jpg",
+  "keywords": ["shot", "whiskey", "tequila", "strong", "alcoholic"]
+}

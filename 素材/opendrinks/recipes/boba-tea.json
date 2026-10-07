@@ -1,0 +1,49 @@
+{
+    "name": "Boba Tea",
+    "description": "Trending Boba Tea.",
+    "github": "cendekia",
+    "ingredients": [
+        {
+            "quantity": "240",
+            "measure": "ml",
+            "ingredient": "water"
+        },
+        {
+            "quantity": "3",
+            "measure": "",
+            "ingredient": "black tea bags"
+        },
+        {
+            "quantity": "25",
+            "measure": "gram",
+            "ingredient": "black tapioca pearls"
+        },
+        {
+            "quantity": "220",
+            "measure": "gram",
+            "ingredient": "brown sugar"
+        },
+        {
+            "quantity": "120",
+            "measure": "ml",
+            "ingredient": "hot water"
+        }
+    ],
+    "directions": [
+        "Combine the water and tea bags in a medium pot over high heat. Bring to a boil, then remove the pan from the heat and let the tea cool to room temperature.",
+        "Bring a medium pot of water to boil over high heat. Once the water is boiling, add the tapioca pearls and boil until softened, about 20 minutes.",
+        "Drain the pearls through a strainer.",
+        "Set the strainer with the pearls over a medium bowl. Add the brown sugar to the strainer and pour the hot water over.",
+        "Stir to dissolve the brown sugar. Soak the pearls in brown sugar syrup for 30 minutes, then store the bubbles and syrup separately until ready to serve.",
+        "Assemble the tea: Put the pearls and ice, then add the brown sugar syrup, tea",
+        "Stir with a wide-opening straw, then serve.",
+        "Enjoy!"
+    ],
+    "image": "boba-tea.jpg",
+    "keywords": [
+        "tea",
+        "mocktail",
+        "non-alcoholic",
+        "vegan"
+    ]
+}

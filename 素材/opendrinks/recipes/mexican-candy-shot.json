@@ -1,0 +1,19 @@
+{
+  "name": "Mexican Candy Shot",
+  "description": "A sweet-and-spicy tequila shot with watermelon and lime.",
+  "github": "opendrinks",
+  "ingredients": [
+    { "quantity": "1", "measure": "oz", "ingredient": "Tequila" },
+    { "quantity": "1", "measure": "oz", "ingredient": "Watermelon liqueur" },
+    { "quantity": "1/2", "measure": "oz", "ingredient": "Lime juice" },
+    { "quantity": "", "measure": "", "ingredient": "Ice" }
+  ],
+  "directions": [
+    "Fill a shaker with ice.",
+    "Add tequila, watermelon liqueur, and lime juice.",
+    "Shake and strain into a shot glass.",
+    "Serve immediately."
+  ],
+  "image": "pompous-mexican.jpg",
+  "keywords": ["shot", "tequila", "spicy", "watermelon", "lime", "alcoholic"]
+}

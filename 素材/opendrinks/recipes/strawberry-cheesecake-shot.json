@@ -1,0 +1,19 @@
+{
+  "name": "Strawberry Cheesecake Shot",
+  "description": "A creamy dessert shot with strawberry and vanilla notes.",
+  "github": "opendrinks",
+  "ingredients": [
+    { "quantity": "1", "measure": "oz", "ingredient": "Vanilla vodka" },
+    { "quantity": "1/2", "measure": "oz", "ingredient": "Strawberry liqueur" },
+    { "quantity": "1/2", "measure": "oz", "ingredient": "Irish cream" },
+    { "quantity": "", "measure": "", "ingredient": "Ice" }
+  ],
+  "directions": [
+    "Fill a shaker with ice.",
+    "Add vanilla vodka, strawberry liqueur, and Irish cream.",
+    "Shake well and strain into a shot glass.",
+    "Serve immediately."
+  ],
+  "image": "strawberry-daiquiri.jpg",
+  "keywords": ["shot", "sweet", "cream", "strawberry", "vodka", "alcoholic"]
+}

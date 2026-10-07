@@ -1,0 +1,14 @@
+{
+  "name": "Fireball Shot",
+  "description": "A spicy cinnamon whiskey shot that's easy and always a party hit.",
+  "github": "opendrinks",
+  "ingredients": [
+    { "quantity": "1 1/2", "measure": "oz", "ingredient": "Cinnamon whiskey" }
+  ],
+  "directions": [
+    "Chill the cinnamon whiskey if desired.",
+    "Pour into a shot glass and serve."
+  ],
+  "image": "fireball-hot-toddies.jpg",
+  "keywords": ["shot", "whiskey", "cinnamon", "strong", "alcoholic"]
+}

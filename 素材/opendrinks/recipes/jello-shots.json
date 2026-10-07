@@ -1,0 +1,19 @@
+{
+  "name": "Jello Shots",
+  "description": "A party favorite made by setting flavored gelatin with vodka in small cups.",
+  "github": "opendrinks",
+  "ingredients": [
+    { "quantity": "1", "measure": "packet", "ingredient": "Flavored gelatin" },
+    { "quantity": "1", "measure": "cup", "ingredient": "Boiling water" },
+    { "quantity": "1/2", "measure": "cup", "ingredient": "Vodka" },
+    { "quantity": "1/2", "measure": "cup", "ingredient": "Cold water" }
+  ],
+  "directions": [
+    "Dissolve the gelatin in boiling water, stirring until fully dissolved.",
+    "Stir in vodka and cold water.",
+    "Pour into small cups and refrigerate until set.",
+    "Serve chilled."
+  ],
+  "image": "jamun-shots.jpg",
+  "keywords": ["shot", "vodka", "party", "sweet", "gelatin", "cold"]
+}

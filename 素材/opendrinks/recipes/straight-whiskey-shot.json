@@ -1,0 +1,14 @@
+{
+  "name": "Straight Whiskey Shot",
+  "description": "A no-mix classic: straight whiskey served as a simple shot.",
+  "github": "opendrinks",
+  "ingredients": [
+    { "quantity": "1 1/2", "measure": "oz", "ingredient": "Whiskey" }
+  ],
+  "directions": [
+    "Pour whiskey into a shot glass.",
+    "Serve neat."
+  ],
+  "image": "whiskey-highball.jpg",
+  "keywords": ["shot", "whiskey", "simple", "strong", "alcoholic"]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "Cement Mixer",
+  "description": "A notorious shot where citrus curdles the cream liqueur — a party dare classic.",
+  "github": "opendrinks",
+  "ingredients": [
+    { "quantity": "1", "measure": "oz", "ingredient": "Irish cream" },
+    { "quantity": "1", "measure": "oz", "ingredient": "Lime juice" }
+  ],
+  "directions": [
+    "Pour Irish cream into one shot glass and lime juice into another.",
+    "Take the Irish cream first, then the lime juice.",
+    "Swish briefly in your mouth (it will curdle) and swallow."
+  ],
+  "image": "quick-demise.jpg",
+  "keywords": ["shot", "cream", "lime", "strong", "party", "alcoholic"]
+}

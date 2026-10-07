@@ -1,0 +1,55 @@
+{
+    "name": "Mojito",
+    "description": "The Mojito is traditionally served over ice in a highball glass and often associated with summer.",
+    "github": "alfg",
+    "ingredients": [
+        {
+            "quantity": "",
+            "measure": "",
+            "ingredient": "ice"
+        },
+        {
+            "quantity": "6",
+            "measure": "ounces",
+            "ingredient": "light rum"
+        },
+        {
+            "quantity": "4",
+            "measure": "",
+            "ingredient": "lime wedges"
+        },
+        {
+            "quantity": "12",
+            "measure": "",
+            "ingredient": "mint sprigs, or spear"
+        },
+        {
+            "quantity": "6",
+            "measure": "tablespoons",
+            "ingredient": "fresh lime juice"
+        },
+        {
+            "quantity": "4",
+            "measure": "tablespoons",
+            "ingredient": "sugar"
+        },
+        {
+            "quantity": "",
+            "measure": "",
+            "ingredient": "club soda"
+        }
+    ],
+    "directions": [
+        "Place ice, rum, eight broken up mint sprigs, lime juice, and sugar in a beverage shaker .",
+        "Shake well and serve over ice in a high ball glass. Top off each glass with a splash of club soda.",
+        "Garnish each with a slice of lime and a sprig of mint."
+    ],
+    "image": "mojito.jpg",
+    "keywords": [
+        "rum",
+        "lime",
+        "mint",
+        "alcoholic",
+        "vegan"
+    ]
+}

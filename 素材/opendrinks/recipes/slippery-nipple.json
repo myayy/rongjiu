@@ -1,0 +1,16 @@
+{
+  "name": "Slippery Nipple",
+  "description": "A classic layered shot with anise flavor and creamy sweetness.",
+  "github": "opendrinks",
+  "ingredients": [
+    { "quantity": "1", "measure": "oz", "ingredient": "Sambuca" },
+    { "quantity": "1", "measure": "oz", "ingredient": "Irish cream" }
+  ],
+  "directions": [
+    "Pour sambuca into a shot glass.",
+    "Slowly float the Irish cream on top using the back of a spoon.",
+    "Serve immediately."
+  ],
+  "image": "orgasm.jpg",
+  "keywords": ["shot", "layered", "sambuca", "cream", "sweet", "alcoholic"]
+}

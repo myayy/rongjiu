@@ -1,0 +1,19 @@
+{
+  "name": "Kamikaze Shot",
+  "description": "A tart, citrus-forward vodka shooter made with lime and orange liqueur.",
+  "github": "opendrinks",
+  "ingredients": [
+    { "quantity": "1", "measure": "oz", "ingredient": "Vodka" },
+    { "quantity": "1", "measure": "oz", "ingredient": "Triple sec" },
+    { "quantity": "1", "measure": "oz", "ingredient": "Lime juice" },
+    { "quantity": "", "measure": "", "ingredient": "Ice" }
+  ],
+  "directions": [
+    "Fill a shaker with ice.",
+    "Add vodka, triple sec, and lime juice.",
+    "Shake hard for 10–15 seconds.",
+    "Strain into a chilled shot glass."
+  ],
+  "image": "lemon-drop.jpg",
+  "keywords": ["shot", "vodka", "triple sec", "lime", "alcoholic", "cold"]
+}

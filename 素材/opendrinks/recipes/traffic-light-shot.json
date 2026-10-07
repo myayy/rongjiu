@@ -1,0 +1,18 @@
+{
+  "name": "Traffic Light Shot",
+  "description": "A colorful layered shooter inspired by a traffic light: red, yellow, and green hues.",
+  "github": "opendrinks",
+  "ingredients": [
+    { "quantity": "1/2", "measure": "oz", "ingredient": "Grenadine" },
+    { "quantity": "1/2", "measure": "oz", "ingredient": "Orange juice" },
+    { "quantity": "1/2", "measure": "oz", "ingredient": "Blue curaçao" }
+  ],
+  "directions": [
+    "Pour grenadine into a shot glass.",
+    "Slowly add orange juice over the back of a spoon to create the next layer.",
+    "Float blue curaçao on top using the back of a spoon.",
+    "Serve immediately."
+  ],
+  "image": "taste-the-rainbow.jpg",
+  "keywords": ["shot", "layered", "grenadine", "curaçao", "orange", "alcoholic"]
+}

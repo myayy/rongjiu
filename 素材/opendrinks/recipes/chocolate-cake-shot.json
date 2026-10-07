@@ -1,0 +1,20 @@
+{
+  "name": "Chocolate Cake Shot",
+  "description": "A dessert-style shot that tastes like chocolate cake when paired with a sugared lemon wedge.",
+  "github": "opendrinks",
+  "ingredients": [
+    { "quantity": "1", "measure": "oz", "ingredient": "Vodka" },
+    { "quantity": "1", "measure": "oz", "ingredient": "Hazelnut liqueur" },
+    { "quantity": "1", "measure": "wedge", "ingredient": "Lemon" },
+    { "quantity": "", "measure": "", "ingredient": "Sugar" },
+    { "quantity": "", "measure": "", "ingredient": "Ice" }
+  ],
+  "directions": [
+    "Rim a lemon wedge in sugar and set aside.",
+    "Fill a shaker with ice and add vodka and hazelnut liqueur.",
+    "Shake and strain into a shot glass.",
+    "Take the shot and bite the sugared lemon wedge."
+  ],
+  "image": "nutella-milkshake.jpg",
+  "keywords": ["shot", "vodka", "sweet", "dessert", "hazelnut", "alcoholic"]
+}
