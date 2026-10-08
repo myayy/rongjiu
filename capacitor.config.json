@@ -1,0 +1,12 @@
+{
+  "appId": "com.myayy.rongjiu",
+  "appName": "融酒",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true
+  }
+}

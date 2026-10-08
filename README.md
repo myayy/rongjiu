@@ -326,6 +326,8 @@ npx serve .          # 然后访问 http://localhost:3000/index.html
 ├─ sw.js                   Service Worker：外壳预缓存 + 配方图按需缓存
 ├─ .nojekyll               告诉 GitHub Pages 不要走 Jekyll 处理
 ├─ icons/                  应用图标（192 / 512 / iOS 180，由 tools/make-icons.js 生成）
+├─ capacitor.config.json   Android 壳（Capacitor）配置：appId / appName / webDir
+├─ package.json            仅打包 APK 用的依赖声明；跑 App 本身不需要
 ├─ css/style.css           全部样式
 ├─ js/
 │  ├─ data.js              配方数据（由 tools/gen-data.js 自动生成，勿手改）
@@ -335,8 +337,10 @@ npx serve .          # 然后访问 http://localhost:3000/index.html
 │  ├─ app.js               装配层：state、路由、事件委托
 │  └─ store.js             localStorage 读写、备份导入导出
 ├─ 素材/                   配方原图与 index.zh.json（约 74 MB）
-├─ tools/                  数据生成 / 清洗 / 单位换算 / 图标生成等开发脚本
+├─ tools/                  数据生成 / 清洗 / 单位换算 / 图标 / www 组装等脚本
 ├─ tests/                  node --test 测试用例
+├─ www/                    （生成物，不进 git）打包 APK 用的网站目录
+├─ android/                （生成物，不进 git）Capacitor 生成的安卓工程
 └─ PRO.md                  需求与决策记录
 ```
 
@@ -357,6 +361,38 @@ npx serve .
 
 改了 `css/` / `js/` / `index.html` 后，记得把 `sw.js` 里的 `VERSION` 加一（如 `rongjiu-v2`），
 旧缓存会在 activate 阶段被清掉，用户下次打开就是新版本。
+
+### 打包 Android APK（可选）
+
+只有想生成 `.apk` 安装包时才需要这套工具链；**跑 App 本身完全不需要**。
+
+前置环境（本项目实测可用的组合）：
+
+| 组件 | 版本 / 路径 |
+| --- | --- |
+| JDK | Temurin **21**（`F:\android-dev\jdk21`）。Capacitor 7 的安卓库写死了 `JavaVersion.VERSION_21`，用 JDK 17 会报「无效的源发行版：21」 |
+| Android SDK | command-line tools + `platforms;android-35` + `build-tools;35.0.0`（`F:\android-dev\android-sdk`） |
+
+配合版本：Capacitor 7.6.9 + AGP 8.7.2 + Gradle 8.11.1 + compileSdk/targetSdk 35、minSdk 23。
+
+```bash
+npm install                # 只装 Capacitor 相关依赖
+node tools/make-www.js     # 把外壳 + 素材组装成 www/（webDir 不能直接指向项目根目录）
+
+# 首次需要生成安卓工程（android/ 已被 gitignore，可随时重建）
+npx cap add android
+# 生成后要手动补两处（都在 android/ 里，重新生成工程后需要重做）：
+#   1) android/local.properties   ->  sdk.dir=F:/android-dev/android-sdk
+#   2) android/gradle.properties  ->  android.overridePathCheck=true
+#      （本项目在中文路径下，AGP 默认拒绝构建；本项目无 NDK/原生代码，开这个开关即可）
+
+npm run apk                # = make-www + cap sync + gradlew assembleDebug
+```
+
+产物：`android/app/build/outputs/apk/debug/app-debug.apk`，传到手机点开即可安装（需允许「安装未知来源应用」）。
+
+> 首次构建要下载 Gradle 发行包和 AGP 依赖（约 300 MB，缓存进 `~/.gradle`），耐心等几分钟；
+> 之后的增量构建通常几十秒。
 
 ## 已知限制
 
