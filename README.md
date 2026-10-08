@@ -132,20 +132,29 @@
 
 **不需要安装任何东西，也不需要联网。** 运行 App 只需要一个浏览器（推荐 Chrome / Edge）。
 
-### 方式一：直接打开线上地址（手机上推荐，能装成 App）
+### 方式一：下载 Android APK 直接用（手机上最简单）
+
+**[⬇ rongjiu-v1.0-debug.apk (78.9 MB)](https://github.com/myayy/rongjiu/releases/download/v1.0.0/rongjiu-v1.0-debug.apk)** ｜ [全部版本](https://github.com/myayy/rongjiu/releases)
+
+- 传到手机 → 点开 → 允许「安装未知来源应用」即可安装。
+- 应用名「融酒」，包名 `com.myayy.rongjiu`，v1.0，minSdk 23（Android 6.0+），只申请 `INTERNET` 权限。
+- 配方与图片**全部打进 APK**，装完就是完全离线可用，不需要联网。
+- 这是 debug 签名的构建，仅供个人侧载；想自己重打见下方「打包 Android APK」。
+
+### 方式二：直接打开线上地址（不用装，也能「添加到主屏幕」）
 
 **https://myayy.github.io/rongjiu/**
 
 手机浏览器打开后用「添加到主屏幕」（见上一节），即可获得全屏、离线可用的独立 App。
 （该地址由本仓库的 GitHub Pages 提供，页面壳和图片走网络，你的酒柜 / 材料 / 评分等数据始终只存在你自己手机里。）
 
-### 方式二：下载到本地用浏览器打开（最简单、完全离线）
+### 方式三：下载到本地用浏览器打开（最简单、完全离线）
 
 1. 下载或克隆本仓库到本地；
 2. **保留整个目录结构**（`素材/` 约 74 MB 必须一起下载，否则图片显示不出来）；
 3. 双击根目录的 `index.html`，浏览器即可打开使用。
 
-### 方式三：起一个本地静态服务器（可选）
+### 方式四：起一个本地静态服务器（可选）
 
 `file://` 下 Service Worker 无法注册，体验不到离线缓存；用静态服务器打开就能完整跑 PWA。任意静态服务器指向项目根目录即可，例如：
 
@@ -155,7 +164,7 @@ npx serve .          # 然后访问 http://localhost:3000/index.html
 
 ### 只有跑测试才需要 Node.js（开发用，运行 App 不需要）
 
-需要 Node.js 18+（用到内置的 `node --test`），无需 `npm install`——项目零依赖。
+需要 Node.js 18+（用到内置的 `node --test`），无需 `npm install`。
 
 ---
 
