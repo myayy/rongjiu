@@ -203,6 +203,11 @@ html, body {
 .form input:focus, .form textarea:focus, .form select:focus { border-color: var(--accent); }
 .form textarea { resize: vertical; min-height: 84px; line-height: 1.6; }
 .form .err { color: var(--red); font-size: 12px; margin-top: 6px; min-height: 16px; }
+.img-preview { margin-top: 8px; }
+.img-preview img {
+  width: 100%; max-height: 220px; object-fit: cover;
+  border-radius: 12px; border: 1px solid var(--line);
+}
 
 /* ---- FAB ---- */
 .fab {
@@ -246,18 +251,40 @@ html, body {
 /* ---- 其它 ---- */
 .more-hint { text-align: center; font-size: 12px; color: var(--muted); padding: 10px 0 4px; }
 
-/* ---- 翻页 ---- */
-.pager { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; margin: 14px 0 6px; }
-.pg {
-  border: 1px solid var(--line); background: var(--card); color: #6d675d;
-  border-radius: 10px; min-width: 36px; height: 34px; padding: 0 9px;
-  font-size: 13px; cursor: pointer;
+/* ---- 搜索行（搜索框 + 换一批） ---- */
+.search-row { display: flex; gap: 8px; align-items: center; }
+.search-row .search { flex: 1 1 auto; min-width: 0; }
+.search-row .icon-btn { flex: 0 0 auto; width: 38px; height: 38px; }
+
+/* ---- 列表底部：加载更多 / 已到底 ---- */
+.list-more, .list-end { text-align: center; color: var(--muted); font-size: 12px; padding: 14px 0 8px; }
+.list-more .more-btn, .list-end .more-btn {
+  width: auto; display: inline-flex; padding: 8px 18px; font-size: 13px; margin-top: 8px;
 }
-.pg:active { background: var(--accent-soft); }
-.pg.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
-.pg:disabled { opacity: .4; cursor: not-allowed; }
-.pg.dots { border: none; background: transparent; cursor: default; min-width: 16px; padding: 0; }
-.pager-hint { text-align: center; font-size: 12px; color: var(--muted); padding-bottom: 6px; }
+
+/* ---- 星级评价 ---- */
+.rate-row { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+.star {
+  border: none; background: none; padding: 0 2px; cursor: pointer;
+  font-size: 22px; line-height: 1; color: #dcd6c9;
+}
+.star.on { color: #e0a12a; }
+.star:active { transform: scale(.92); }
+.rate-txt { font-size: 12px; color: var(--muted); margin-left: 6px; }
+.rated-item { margin-bottom: 12px; }
+.rated-item .card { margin-bottom: 2px; }
+
+/* ---- 浏览历史 ---- */
+.hist-item { margin-bottom: 10px; }
+.hist-item .card { margin-bottom: 2px; }
+.hist-foot { display: flex; align-items: center; justify-content: space-between; padding: 0 4px 0 2px; }
+.hist-time { font-size: 12px; color: var(--muted); }
+.hist-del {
+  border: 1px solid var(--line); background: var(--card); color: var(--muted);
+  border-radius: 8px; width: 26px; height: 26px; font-size: 12px; cursor: pointer;
+}
+.hist-del:active { background: var(--accent-soft); color: var(--accent); }
+
 .toast {
   position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%);
   background: rgba(30, 25, 18, .92); color: #fff; font-size: 13px;

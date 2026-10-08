@@ -6,7 +6,10 @@
     cabinet: 'rj.cabinet',
     custom: 'rj.custom',
     settings: 'rj.settings',
-    seen: 'rj.blindSeen'
+    seen: 'rj.blindSeen',
+    pantry: 'rj.pantry',
+    ratings: 'rj.ratings',
+    history: 'rj.history'
   };
 
   var SCHEMA = 1;
@@ -103,7 +106,7 @@
         ingredients_zh: drink.ingredients_zh.map(function (x) { return String(x); }),
         instructions_en: drink.instructions_en || '',
         instructions_zh: drink.instructions_zh || '',
-        image: ''
+        image: drink.image || ''
       };
       list.unshift(rec);
       write(KEYS.custom, list);
@@ -146,6 +149,114 @@
       write(KEYS.seen, v);
     };
 
+    /* ----- 我的材料（家里现有的配料） ----- */
+    api.getPantry = function () {
+      var v = read(KEYS.pantry, []);
+      if (!Array.isArray(v)) return [];
+      var out = [];
+      for (var i = 0; i < v.length; i++) {
+        if (typeof v[i] !== 'string') continue;
+        var n = v[i].trim();
+        if (n && out.indexOf(n) === -1) out.push(n);
+      }
+      return out;
+    };
+    api.addPantry = function (name) {
+      if (typeof name !== 'string') throw new Error('非法材料');
+      var n = name.trim();
+      if (!n) throw new Error('材料名不能为空');
+      var list = api.getPantry();
+      if (list.indexOf(n) !== -1) return false;
+      list.push(n);
+      write(KEYS.pantry, list);
+      return true;
+    };
+    api.removePantry = function (name) {
+      var list = api.getPantry();
+      var next = list.filter(function (x) { return x !== name; });
+      if (next.length !== list.length) { write(KEYS.pantry, next); return true; }
+      return false;
+    };
+    api.clearPantry = function () {
+      write(KEYS.pantry, []);
+    };
+
+    /* ----- 星级评价（做过的酒） ----- */
+    function cleanRating(n) {
+      var v = Number(n);
+      if (!isFinite(v) || v % 1 !== 0 || v < 1 || v > 5) return 0;
+      return v;
+    }
+    api.getRatings = function () {
+      var v = read(KEYS.ratings, {});
+      if (!v || typeof v !== 'object' || Array.isArray(v)) return {};
+      var out = {};
+      Object.keys(v).forEach(function (k) {
+        var r = cleanRating(v[k]);
+        if (r) out[k] = r;      // 401 / 'abc' / 0 / 6 / null 之类的脏值直接丢弃
+      });
+      return out;
+    };
+    api.getRating = function (id) {
+      return api.getRatings()[id] || 0;
+    };
+    /* n = 0 表示取消评分 */
+    api.setRating = function (id, n) {
+      if (typeof id !== 'string' || !id) throw new Error('非法 id');
+      var all = api.getRatings();
+      if (n === 0 || n === '0') {
+        delete all[id];
+        write(KEYS.ratings, all);
+        return 0;
+      }
+      var r = cleanRating(n);
+      if (!r) throw new Error('评分必须是 1~5');
+      all[id] = r;
+      write(KEYS.ratings, all);
+      return r;
+    };
+    api.removeRating = function (id) {
+      return api.setRating(id, 0);
+    };
+
+    /* ----- 浏览历史（足迹）：最新在前，最多 100 条 ----- */
+    var HISTORY_MAX = 100;
+    api.getHistory = function () {
+      var v = read(KEYS.history, []);
+      if (!Array.isArray(v)) return [];
+      var out = [];
+      var seen = {};
+      for (var i = 0; i < v.length; i++) {
+        var it = v[i];
+        if (!it || typeof it.id !== 'string' || !it.id) continue;
+        var at = Number(it.at);
+        if (!isFinite(at)) continue;
+        if (seen[it.id]) continue;        // 同款只留最靠前（最新）的那条
+        seen[it.id] = 1;
+        out.push({ id: it.id, at: at });
+      }
+      return out;
+    };
+    api.pushHistory = function (id, at) {
+      if (typeof id !== 'string' || !id) throw new Error('非法 id');
+      var ts = Number(at);
+      if (!isFinite(ts)) ts = Date.now();
+      var list = api.getHistory().filter(function (x) { return x.id !== id; });
+      list.unshift({ id: id, at: ts });   // 再看到就刷新时间并挪到最前
+      if (list.length > HISTORY_MAX) list = list.slice(0, HISTORY_MAX);
+      write(KEYS.history, list);
+      return list;
+    };
+    api.removeHistory = function (id) {
+      var list = api.getHistory();
+      var next = list.filter(function (x) { return x.id !== id; });
+      if (next.length !== list.length) { write(KEYS.history, next); return true; }
+      return false;
+    };
+    api.clearHistory = function () {
+      write(KEYS.history, []);
+    };
+
     /* ----- 全量配方（主库 + 自制） ----- */
     api.allRecipes = function () {
       var base = Array.isArray(global.DRINKS) ? global.DRINKS : [];
@@ -165,7 +276,10 @@
         exported_at: new Date().toISOString(),
         cabinet: api.getCabinet(),
         custom: api.getCustom(),
-        settings: api.getSettings()
+        settings: api.getSettings(),
+        pantry: api.getPantry(),
+        ratings: api.getRatings(),
+        history: api.getHistory()
       };
     };
 
@@ -189,6 +303,10 @@
         write(KEYS.cabinet, data.cabinet);
         write(KEYS.custom, data.custom);
         write(KEYS.settings, data.settings && typeof data.settings === 'object' ? data.settings : {});
+        write(KEYS.pantry, Array.isArray(data.pantry) ? data.pantry : []);
+        write(KEYS.ratings, (data.ratings && typeof data.ratings === 'object' && !Array.isArray(data.ratings))
+          ? data.ratings : {});
+        write(KEYS.history, Array.isArray(data.history) ? data.history : []);
       } else {
         var cab = api.getCabinet();
         data.cabinet.forEach(function (id) { if (cab.indexOf(id) === -1) cab.push(id); });
@@ -206,6 +324,37 @@
         write(KEYS.custom, custom);
 
         if (data.settings && typeof data.settings === 'object') api.setSettings(data.settings);
+
+        if (Array.isArray(data.pantry)) {
+          var pantry = api.getPantry();
+          data.pantry.forEach(function (n) {
+            if (typeof n === 'string' && n.trim() && pantry.indexOf(n.trim()) === -1) pantry.push(n.trim());
+          });
+          write(KEYS.pantry, pantry);
+        }
+        if (data.ratings && typeof data.ratings === 'object' && !Array.isArray(data.ratings)) {
+          var ratings = api.getRatings();
+          Object.keys(data.ratings).forEach(function (k) {
+            var v = cleanRating(data.ratings[k]);
+            if (v) ratings[k] = v;
+          });
+          write(KEYS.ratings, ratings);
+        }
+        if (Array.isArray(data.history)) {
+          // 合并：同款取时间较新的那条
+          var merged = api.getHistory();
+          data.history.forEach(function (it) {
+            if (!it || typeof it.id !== 'string' || !it.id) return;
+            var at = Number(it.at);
+            if (!isFinite(at)) return;
+            var hit = null;
+            for (var i = 0; i < merged.length; i++) if (merged[i].id === it.id) { hit = merged[i]; break; }
+            if (hit) { if (at > hit.at) hit.at = at; }
+            else merged.push({ id: it.id, at: at });
+          });
+          merged.sort(function (a, b) { return b.at - a.at; });
+          write(KEYS.history, merged.slice(0, 100));
+        }
       }
       return { cabinet: api.getCabinet().length, custom: api.getCustom().length };
     };

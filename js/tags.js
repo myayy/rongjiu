@@ -93,6 +93,49 @@
     return false;
   }
 
+  /* ---------- 我的材料 → 能做的酒 ---------- */
+  /* 双向包含：家里有「朗姆酒」能命中配方的「白朗姆酒」，反向也命中 */
+  function ingMatches(a, b) {
+    if (!a || !b) return false;
+    return a === b || a.indexOf(b) !== -1 || b.indexOf(a) !== -1;
+  }
+
+  /* 这条配方还缺哪些材料：
+     []    → 材料齐全
+     [x]   → 还差 1 样（缺 x）
+     [x,y] → 差太多，不进「能做的酒」
+     null  → 没有可统计的材料（只有冰/水），不参与 */
+  function pantryMissing(drink, pantry) {
+    var names = ingredientNames(drink);
+    var have = (pantry || []).filter(function (n) { return typeof n === 'string' && n; });
+    var need = [];
+    var countable = 0;
+    for (var i = 0; i < names.length; i++) {
+      var n = names[i];
+      if (ING_STOP[n]) continue;      // 冰块 / 冰 / 水 永远不算「缺」
+      countable++;
+      var ok = false;
+      for (var j = 0; j < have.length; j++) {
+        if (ingMatches(n, have[j])) { ok = true; break; }
+      }
+      if (!ok) need.push(n);
+    }
+    if (!countable) return null;
+    return need;
+  }
+
+  function pantryGroups(list, pantry) {
+    var ready = [];
+    var near = [];
+    (list || []).forEach(function (d) {
+      var miss = pantryMissing(d, pantry);
+      if (miss === null) return;
+      if (miss.length === 0) ready.push({ drink: d, missing: null });
+      else if (miss.length === 1) near.push({ drink: d, missing: miss[0] });
+    });
+    return { ready: ready, near: near };
+  }
+
   /* ---------- 价格估算（元/杯）：同组取最高，跨组累加 ---------- */
   var PRICE_RULES = [
     { group: 'vodka', cost: 15, re: /伏特加|\bvodka\b/i },
@@ -190,6 +233,9 @@
     ingredientNames: ingredientNames,
     commonIngredients: commonIngredients,
     hasIngredient: hasIngredient,
+    ingMatches: ingMatches,
+    pantryMissing: pantryMissing,
+    pantryGroups: pantryGroups,
     estimatePrice: estimatePrice,
     defaultTiers: defaultTiers,
     normalizeTiers: normalizeTiers,

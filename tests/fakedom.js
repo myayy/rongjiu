@@ -32,6 +32,16 @@ function El(tag, doc, attrs) {
   this.classList = classListStub();
   this.files = [];
   this.parentNode = null;
+  this.selectionStart = 0;
+  this.selectionEnd = 0;
+  this.setSelectionRange = function (a, b) { self.selectionStart = a; self.selectionEnd = b; };
+  // 尺寸字段：真实 DOM 里未布局元素就是 0；显式声明避免 undefined 参与算术得出 NaN
+  this.scrollTop = 0;
+  this.scrollLeft = 0;
+  this.clientHeight = 0;
+  this.clientWidth = 0;
+  this.scrollHeight = 0;
+  this.scrollWidth = 0;
 
   this.setAttribute = function (k, v) { self.attributes[k] = String(v); };
   this.getAttribute = function (k) { return Object.prototype.hasOwnProperty.call(self.attributes, k) ? self.attributes[k] : null; };
@@ -103,7 +113,7 @@ function FakeDoc() {
 
   this.createElement = function (tag) { return new El(tag, doc); };
 
-  this._tabEls = ['recommend', 'cabinet', 'box'].map(function (name) {
+  this._tabEls = ['recommend', 'cabinet', 'box', 'mixer'].map(function (name) {
     var e = new El('a', doc);
     e.setAttribute('data-tab', name);
     e.className = 'tab';
@@ -160,6 +170,9 @@ function FakeWin() {
   this.FileReader = function () {
     var r = this;
     this.readAsText = function () {
+      r.__pending = true;
+    };
+    this.readAsDataURL = function () {
       r.__pending = true;
     };
     this.__resolve = function (text) {

@@ -2,7 +2,7 @@
 (function (global) {
   'use strict';
 
-  var PAGES = ['recommend', 'cabinet', 'box'];
+  var PAGES = ['recommend', 'cabinet', 'box', 'mixer'];
 
   function parseHash(hash) {
     var h = String(hash || '').replace(/^#/, '');
@@ -42,15 +42,53 @@
     return base + '?' + qs;
   }
 
+  /* ----- 时间戳格式化：2026年10月08日 21点30分 ----- */
+  function formatStamp(ms) {
+    if (typeof ms !== 'number' && typeof ms !== 'string') return '';
+    if (String(ms).trim() === '') return '';
+    var t = Number(ms);
+    if (!isFinite(t)) return '';
+    var d = new Date(t);
+    var y = d.getFullYear();
+    if (!isFinite(y)) return '';
+    function pad(n) { return n < 10 ? '0' + n : String(n); }
+    return y + '年' + pad(d.getMonth() + 1) + '月' + pad(d.getDate()) + '日 '
+      + pad(d.getHours()) + '点' + pad(d.getMinutes()) + '分';
+  }
+
   /* ----- 筛选 ----- */
+  /* 查询分词：忽略空白与大小写；
+     纯 ASCII 片段整段作为一个 token（否则 mojito 会被拆成 m/o/j… 命中全库）；
+     含中文的片段逐字拆开（「莫托」→ 莫 / 托）。 */
+  function queryTokens(q) {
+    var s = String(q === undefined || q === null ? '' : q).trim().toLowerCase();
+    if (!s) return [];
+    var parts = s.split(/\s+/);
+    var out = [];
+    for (var i = 0; i < parts.length; i++) {
+      var p = parts[i];
+      if (!p) continue;
+      if (/^[\x00-\x7f]+$/.test(p)) { out.push(p); continue; }
+      for (var j = 0; j < p.length; j++) out.push(p.charAt(j));
+    }
+    var uniq = [];
+    for (var k = 0; k < out.length; k++) {
+      if (uniq.indexOf(out[k]) === -1) uniq.push(out[k]);
+    }
+    return uniq;
+  }
+
+  /* 逐字匹配：任意一个 token 命中即保留（OR），所以「莫托」能找到「莫吉托」 */
   function matchesQuery(drink, q) {
-    if (!q) return true;
-    var s = String(q).trim().toLowerCase();
-    if (!s) return true;
+    var tokens = queryTokens(q);
+    if (!tokens.length) return true;
     var hay = [
       drink.name, drink.name_zh, drink.name_display, drink.category, drink.glass
     ].concat(drink.ingredients_zh || []).concat(drink.ingredients_en || []).join(' ').toLowerCase();
-    return hay.indexOf(s) !== -1;
+    for (var i = 0; i < tokens.length; i++) {
+      if (hay.indexOf(tokens[i]) !== -1) return true;
+    }
+    return false;
   }
 
   function matchesFilters(drink, filters, tagsApi) {
@@ -108,23 +146,24 @@
     return out;
   }
 
-  /* ----- 分页（按页翻，像小说翻页） ----- */
-  function pageSizeN(size) {
-    return Math.max(1, parseInt(size, 10) || 30);
-  }
-
-  function pageCount(total, size) {
-    var n = pageSizeN(size);
-    var t = Math.max(0, parseInt(total, 10) || 0);
-    return Math.max(1, Math.ceil(t / n));
-  }
-
-  function pageItems(list, page, size) {
-    var n = pageSizeN(size);
-    var total = pageCount(list.length, n);
-    var p = Math.min(Math.max(1, parseInt(page, 10) || 1), total);
-    var start = (p - 1) * n;
-    return list.slice(start, start + n);
+  /* ----- 洗牌（随机种子打散顺序） -----
+     同一 seed 结果固定：翻页 / 返回详情不会换位置；
+     换一个 seed（每次打开 App）就是另一份顺序。 */
+  function shuffle(list, seed) {
+    var arr = (list || []).slice();
+    var s = (Math.floor(seed) || 1) >>> 0;
+    for (var i = arr.length - 1; i > 0; i--) {
+      s = (s + 0x6D2B79F5) >>> 0;
+      var t = s;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      var r = ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      var j = Math.floor(r * (i + 1));
+      var tmp = arr[i];
+      arr[i] = arr[j];
+      arr[j] = tmp;
+    }
+    return arr;
   }
 
   /* ----- 盲盒 ----- */
@@ -145,11 +184,12 @@
     PAGES: PAGES,
     parseHash: parseHash,
     buildHash: buildHash,
+    formatStamp: formatStamp,
+    queryTokens: queryTokens,
     matchesQuery: matchesQuery,
     filterRecipes: filterRecipes,
     uniqueCategories: uniqueCategories,
-    pageCount: pageCount,
-    pageItems: pageItems,
+    shuffle: shuffle,
     buildBlindPool: buildBlindPool,
     pickRandom: pickRandom
   };

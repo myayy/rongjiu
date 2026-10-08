@@ -14,9 +14,9 @@ test('js/data.js 存在且可加载', () => {
   assert.ok(Array.isArray(globalThis.DRINKS), 'globalThis.DRINKS 应为数组');
 });
 
-test('配方总数为 1395', () => {
+test('配方总数为 1431（1395 主库 + 36 条兑酒）', () => {
   require(path.join(ROOT, 'js', 'data.js'));
-  assert.equal(globalThis.DRINKS.length, 1395);
+  assert.equal(globalThis.DRINKS.length, 1431);
 });
 
 test('每条配方字段完整', () => {
@@ -28,7 +28,7 @@ test('每条配方字段完整', () => {
     }
     assert.ok(Array.isArray(d.ingredients_zh), `${d.id} ingredients_zh 应为数组`);
     assert.ok(d.ingredients_zh.length > 0, `${d.id} 配料为空`);
-    assert.match(d.id, /^(tcdb-\d+|od-.+|dy-.+)$/, `${d.id} 格式非法`);
+    assert.match(d.id, /^(tcdb-\d+|od-.+|dy-.+|cn-.+)$/, `${d.id} 格式非法`);
     assert.match(d.name_display, /（.+）/, `${d.id} name_display 应为「中文（English）」格式`);
   }
 });
@@ -50,7 +50,7 @@ test('图片路径均指向真实文件', () => {
       `${d.id} 图片不存在: ${d.image}`
     );
   }
-  assert.ok(withImage >= 1383, `带图配方应 >=1383，实际 ${withImage}`);
+  assert.ok(withImage >= 1394, `带图配方应 >=1394，实际 ${withImage}`);
 });
 
 test('双击打开的 index.html 引用的所有本地资源路径合法', () => {

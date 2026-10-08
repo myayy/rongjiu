@@ -12,7 +12,7 @@ function main() {
   const parsed = JSON.parse(raw);
   const drinks = parsed.drinks;
   if (!Array.isArray(drinks)) throw new Error('index.zh.json 缺少 drinks 数组');
-  if (drinks.length !== 1395) throw new Error('配方数量异常: ' + drinks.length);
+  if (drinks.length < 1395) throw new Error('配方数量异常: ' + drinks.length);
 
   const out = drinks.map((d) => ({
     id: d.id,

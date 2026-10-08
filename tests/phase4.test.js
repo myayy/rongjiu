@@ -20,10 +20,11 @@ test('路由：空 hash 默认推荐页', () => {
   assert.deepEqual(Core.parseHash('#/nonsense'), Core.parseHash(''));
 });
 
-test('路由：三 Tab 与详情页', () => {
-  for (const p of ['recommend', 'cabinet', 'box']) {
+test('路由：四个 Tab 与详情页', () => {
+  for (const p of ['recommend', 'cabinet', 'box', 'mixer']) {
     assert.equal(Core.parseHash('#/' + p).page, p);
   }
+  assert.equal(Core.buildHash({ page: 'mixer', q: {} }), '#/mixer');
   const d = Core.parseHash('#/drink/tcdb-11000');
   assert.equal(d.page, 'drink');
   assert.equal(d.id, 'tcdb-11000');
@@ -43,16 +44,35 @@ test('路由：query 解析与还原往返一致', () => {
   assert.equal(Core.buildHash({ page: 'recommend', q: { q: '', x: '1' } }), '#/recommend?x=1');
 });
 
-test('搜索：中文名/英文名/配料均可命中', () => {
+test('搜索：中文名/英文名/配料均可命中，且支持逐字匹配', () => {
   assert.ok(Core.filterRecipes(DRINKS, { q: '莫吉托' }).length >= 1);
   const en = Core.filterRecipes(DRINKS, { q: 'mojito' });
   assert.ok(en.length >= 1);
   assert.ok(en.some((d) => d.name === 'Mojito'));
   assert.ok(Core.filterRecipes(DRINKS, { q: '伏特加' }).length > 50);
-  assert.equal(Core.filterRecipes(DRINKS, { q: 'zzz不存在的酒zzz' }).length, 0);
+  assert.equal(Core.filterRecipes(DRINKS, { q: 'qzxqzx' }).length, 0);
+
+  // 逐字匹配：字不必连续，命中任一字即可
+  const loose = Core.filterRecipes(DRINKS, { q: '莫托' });
+  assert.ok(loose.some((d) => d.name_zh.includes('莫吉托')), '「莫托」应能找到「莫吉托」');
+  // 单字也能筛，且字越多命中越多（OR 语义）
+  assert.ok(Core.filterRecipes(DRINKS, { q: '莫' }).length > 0, '单字应能筛出结果');
+  assert.ok(Core.filterRecipes(DRINKS, { q: '莫' }).length < Core.filterRecipes(DRINKS, { q: '莫吉托' }).length);
+
   // 空搜索返回全部
   assert.equal(Core.filterRecipes(DRINKS, {}).length, DRINKS.length);
   assert.equal(Core.filterRecipes(DRINKS, { q: '   ' }).length, DRINKS.length);
+});
+
+test('queryTokens：中文逐字、ASCII 整段、忽略空白与大小写', () => {
+  assert.deepEqual(Core.queryTokens('莫 托'), ['莫', '托']);
+  assert.deepEqual(Core.queryTokens('莫吉托'), ['莫', '吉', '托']);
+  assert.deepEqual(Core.queryTokens('mojito'), ['mojito'], 'ASCII 不逐字拆');
+  assert.deepEqual(Core.queryTokens('MOJITO'), ['mojito']);
+  assert.deepEqual(Core.queryTokens('莫 mojito'), ['莫', 'mojito']);
+  assert.deepEqual(Core.queryTokens('莫莫莫'), ['莫'], '重复 token 去重');
+  assert.deepEqual(Core.queryTokens('   '), []);
+  assert.deepEqual(Core.queryTokens(''), []);
 });
 
 test('筛选：含酒精 / 分类', () => {
@@ -98,7 +118,7 @@ test('盲盒：档位 + 口感筛选池非空且命中条件', () => {
 });
 
 test('盲盒：条件全部满足时池为空有明确结果（不抛异常）', () => {
-  const pool = Core.buildBlindPool(DRINKS, { q: 'zzz不存在zzz', tastes: ['甜'] }, Tags);
+  const pool = Core.buildBlindPool(DRINKS, { q: 'qzxqzx', tastes: ['甜'] }, Tags);
   assert.equal(pool.length, 0);
   assert.equal(Core.pickRandom(pool), null);
 });
@@ -115,17 +135,22 @@ test('盲盒：pickRandom 支持排除上次结果', () => {
   assert.equal(Core.pickRandom([]), null);
 });
 
-test('分页：pageCount / pageItems 按页翻且不越界', () => {
-  assert.equal(Core.pageCount(1384, 30), 47);
-  assert.equal(Core.pageCount(0, 30), 1);
-  assert.equal(Core.pageCount(60, 30), 2);
+test('洗牌：同种子顺序固定，不同种子顺序不同，元素不丢不改', () => {
+  const origIds = DRINKS.map((d) => d.id);
+  const a = Core.shuffle(DRINKS, 12345);
+  const b = Core.shuffle(DRINKS, 12345);
+  assert.deepEqual(a.map((d) => d.id), b.map((d) => d.id), '同种子应完全一致');
 
-  assert.equal(Core.pageItems(DRINKS, 1, 30).length, 30);
-  assert.equal(Core.pageItems(DRINKS, 2, 30).length, 30);
-  assert.equal(Core.pageItems(DRINKS, 2, 30)[0].id, DRINKS[30].id, '第 2 页从第 31 条开始');
-  assert.equal(Core.pageItems(DRINKS, 9999, 30).length, DRINKS.length - 46 * 30, '超出末页则落到末页');
-  assert.equal(Core.pageItems(DRINKS, 'x', 30).length, 30, '非法页码按第 1 页');
-  assert.equal(Core.pageItems([], 1, 30).length, 0);
+  const c = Core.shuffle(DRINKS, 54321);
+  assert.notDeepEqual(c.map((d) => d.id), a.map((d) => d.id), '不同种子应换顺序');
+
+  assert.equal(a.length, DRINKS.length, '长度不变');
+  assert.deepEqual(a.map((d) => d.id).sort(), origIds.slice().sort(), '元素不丢不重');
+  assert.notDeepEqual(a.map((d) => d.id), origIds, '顺序确实被打散');
+  assert.deepEqual(DRINKS.map((d) => d.id), origIds, '原数组不被就地改动');
+
+  assert.equal(Core.shuffle([], 1).length, 0);
+  assert.equal(Core.shuffle(null, 1).length, 0);
 });
 
 test('id 可通过 buildHash 定位到详情页', () => {

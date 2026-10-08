@@ -19,7 +19,7 @@ function makeApp(opts) {
   const mem = opts.storage || RJStore.memoryStorage();
   const store = RJStore.createStore(mem);
   if (opts.tiers) store.setPriceTiers(opts.tiers);
-  const app = RJApp.createApp({ doc: env.doc, win: env.win, store, core: Core, ui: UI, tags: Tags });
+  const app = RJApp.createApp({ doc: env.doc, win: env.win, store, core: Core, ui: UI, tags: Tags, seed: opts.seed });
   app._env = env;
   app._store = store;
   app._mem = mem;
@@ -32,6 +32,16 @@ function go(app, hash) {
   app.onHashChange();
 }
 
+/* 当前已渲染的卡片 id（按渲染顺序） */
+function cardIds(app) {
+  return Array.from(app._env.doc.getElementById('view').innerHTML
+    .matchAll(/class="card" data-act="open" data-id="([^"]+)"/g)).map((m) => m[1]);
+}
+
+function viewHtml(app) {
+  return app._env.doc.getElementById('view').innerHTML;
+}
+
 /* ========== P5/P6：推荐页与酒柜 ========== */
 
 test('启动默认落在推荐页，渲染卡片列表与筛选栏', () => {
@@ -40,7 +50,9 @@ test('启动默认落在推荐页，渲染卡片列表与筛选栏', () => {
   const html = app._env.doc.getElementById('view').innerHTML;
   assert.ok(html.includes('searchInput'), '应有搜索框');
   assert.ok(html.includes('class="card"'), '应有卡片');
-  assert.ok(html.includes('data-act="gotoPage"'), '应有页码翻页');
+  assert.ok(html.includes('data-act="refreshList"'), '应有「换一批」按钮');
+  assert.ok(html.includes('id="listMore"'), '应有底部哨兵');
+  assert.ok(!html.includes('data-act="gotoPage"'), '不应再有页码翻页');
   assert.equal(app._env.doc.getElementById('pageTitle').textContent, '推荐');
   const tabs = app._env.doc.querySelectorAll('.tab');
   assert.equal(tabs[0].className, 'tab active');
@@ -53,9 +65,9 @@ test('搜索输入实时过滤（不整页重渲染，保留输入）', () => {
   input.dispatch('input', { target: input });
   const listBox = app._env.doc.getElementById('listBox');
   assert.ok(listBox.innerHTML.includes('莫吉托'));
-  assert.ok(!listBox.innerHTML.includes('僵尸（Zombie）'));
+  assert.ok(!listBox.innerHTML.includes('僵尸（Zombie）'), '「莫吉托」不该命中「僵尸」');
   assert.equal(app.state.q, '莫吉托');
-  assert.equal(app.state.page, 1);
+  assert.equal(app.state.shown, 30);
 });
 
 test('推荐页筛选：口味 / 材料 / 酒精强度，再次点击取消', () => {
@@ -87,39 +99,44 @@ test('推荐页筛选：口味 / 材料 / 酒精强度，再次点击取消', ()
   assert.equal(app.state.strength, '');
 });
 
-test('页码翻页：上一页 / 页码 / 下一页', () => {
+test('筛选状态写回 URL，返回后不丢失', () => {
   const app = makeApp();
-  assert.equal(app.state.page, 1);
-  let html = app._env.doc.getElementById('view').innerHTML;
-  assert.ok(html.includes('第 1 / 47 页'));
-  assert.ok(/class="pg nav"[^>]*disabled/.test(html), '第 1 页「上一页」应禁用');
+  click(app._env.doc, { 'data-act': 'fTaste', 'data-val': '甜' });
+  assert.ok(app._env.win.location.hash.includes('tastes='), '筛选应写回 URL: ' + app._env.win.location.hash);
+  assert.ok(!app._env.win.location.hash.includes('page='), '不应再有 page 参数');
+  const backTo = app._env.win.location.hash;
 
-  click(app._env.doc, { 'data-act': 'gotoPage', 'data-val': '2' });
-  assert.equal(app.state.page, 2);
-  html = app._env.doc.getElementById('view').innerHTML;
-  assert.ok(html.includes('第 2 / 47 页'));
-  assert.ok(/class="pg on"[^>]*>2</.test(html), '第 2 页页码应高亮');
+  click(app._env.doc, { 'data-act': 'open', 'data-id': 'tcdb-11000' });
+  app.onHashChange();
+  go(app, backTo);
+  assert.deepEqual(app.state.tastes, ['甜'], '返回后筛选应保留');
+  assert.equal(app.state.shown, 30);
+});
 
-  click(app._env.doc, { 'data-act': 'gotoPage', 'data-val': '47' });
-  assert.equal(app.state.page, 47);
-  html = app._env.doc.getElementById('view').innerHTML;
-  assert.ok(html.includes('第 47 / 47 页'));
-  assert.ok(html.includes('共 ' + DRINKS.length + ' 款'));
-  assert.ok(/class="pg nav"[^>]*disabled/.test(html), '末页「下一页」应禁用');
+test('推荐页顺序按种子打散：换种子换一批，同种子不变', () => {
+  const app1 = makeApp({ seed: 111 });
+  const app2 = makeApp({ seed: 222 });
+  const app1b = makeApp({ seed: 111 });
+
+  const first = cardIds(app1);
+  assert.equal(first.length, 30, '首页仍 30 张');
+  assert.notDeepEqual(first, cardIds(app2), '不同种子首页应不同');
+  assert.deepEqual(first, cardIds(app1b), '同种子首页应一致');
 });
 
 test('清除筛选恢复全量并有对应按钮', () => {
   const app = makeApp();
   const input = app._env.doc.getElementById('searchInput');
-  input.value = 'zzz不存在zzz';
+  input.value = 'qzxqzx';
   input.dispatch('input', { target: input });
-  let html = app._env.doc.getElementById('view').innerHTML;
+  let html = viewHtml(app);
   assert.ok(html.includes('未找到相关配方'));
   assert.ok(html.includes('data-act="clearFilter"'));
   click(app._env.doc, { 'data-act': 'clearFilter' });
   assert.equal(app.state.q, '');
-  html = app._env.doc.getElementById('view').innerHTML;
-  assert.ok(html.includes('data-act="gotoPage"'));
+  html = viewHtml(app);
+  assert.ok(html.includes('class="card"'));
+  assert.equal(app.state.shown, 30);
 });
 
 test('点卡片进详情，详情可加入酒柜并回到列表', () => {
@@ -154,7 +171,7 @@ test('酒柜页：空状态有引导，加入后列表出现', () => {
   app.render();
   html = app._env.doc.getElementById('view').innerHTML;
   assert.ok(html.includes('僵尸（Zombie）'));
-  assert.ok(html.includes('共 1 瓶'));
+  assert.ok(html.includes('我的酒柜（1 瓶）'));
 
   // 空状态按钮能跳回推荐页
   go(app, '#/cabinet');
@@ -179,7 +196,7 @@ test('酒柜数据在重新创建 app（模拟刷新）后仍在', () => {
   const html = env2.doc.getElementById('view').innerHTML;
   assert.ok(html.includes('莫吉托'));
   assert.ok(html.includes('僵尸'));
-  assert.ok(html.includes('共 2 瓶'));
+  assert.ok(html.includes('我的酒柜（2 瓶）'));
 });
 
 /* ========== P5：新增配方 ========== */

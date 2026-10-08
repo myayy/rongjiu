@@ -138,16 +138,22 @@ test('导入：合并模式并集、不重复', () => {
 test('导入：覆盖模式完全替换', () => {
   const a = newStore();
   a.addCabinet('tcdb-11000');
+  a.addPantry('朗姆酒');
+  a.setRating('tcdb-11000', 5);
 
   const b = newStore();
   b.addCabinet('od-zombie');
   b.addCustom(sample);
   b.setPriceTiers([{ label: 'Z', min: 0, max: 5 }]);
+  b.addPantry('可乐');
+  b.setRating('od-zombie', 2);
 
   b.importBackup(JSON.stringify(a.exportBackup()), 'replace');
   assert.deepEqual(b.getCabinet(), ['tcdb-11000']);
   assert.equal(b.getCustom().length, 0);
   assert.equal(b.getPriceTiers(), null, '覆盖后设置被清空');
+  assert.deepEqual(b.getPantry(), ['朗姆酒'], '覆盖后材料被替换');
+  assert.deepEqual(b.getRatings(), { 'tcdb-11000': 5 }, '覆盖后评分被替换');
 });
 
 test('导入非法输入给出明确错误', () => {
@@ -172,8 +178,12 @@ test('clearAll 清空所有用户数据', () => {
   const s = newStore();
   s.addCabinet('tcdb-11000');
   s.addCustom(sample);
+  s.addPantry('朗姆酒');
+  s.setRating('tcdb-11000', 4);
   s.clearAll();
   assert.deepEqual(s.getCabinet(), []);
   assert.deepEqual(s.getCustom(), []);
   assert.deepEqual(s.getSettings(), {});
+  assert.deepEqual(s.getPantry(), []);
+  assert.deepEqual(s.getRatings(), {});
 });
