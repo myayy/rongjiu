@@ -2,8 +2,17 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>融酒 · 本地调酒助手</title>
+<meta name="description" content="1341 条配方的本地调酒助手：逛配方、录材料看现在能做什么、盲盒随机抽一瓶。数据只存本机，可离线使用。">
+<meta name="theme-color" content="#b4642a">
+<!-- PWA：可「添加到主屏幕」，装出来的就是全屏无地址栏的独立 App -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="融酒">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -31,5 +40,14 @@
 <script src="js/core.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>
+<script>
+/* PWA：注册 Service Worker（离线缓存）。
+   file:// 下浏览器不允许注册，直接跳过，双击 index.html 的用法不受影响。 */
+if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () { /* 注册失败不影响使用 */ });
+  });
+}
+</script>
 </body>
 </html>

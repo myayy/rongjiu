@@ -45,7 +45,8 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px 10px;
+  /* 顶部留出刘海/状态栏高度（PWA 全屏 + viewport-fit=cover 时需要；普通浏览器里 env() 为 0） */
+  padding: calc(14px + env(safe-area-inset-top)) 16px 10px;
   background: var(--bg);
   border-bottom: 1px solid var(--line);
   z-index: 5;
@@ -241,7 +242,7 @@ html, body {
 .overlay.hidden { display: none; }
 .sheet {
   background: var(--bg); width: 100%; max-height: 88%;
-  border-radius: 20px 20px 0 0; padding: 16px 16px 24px;
+  border-radius: 20px 20px 0 0; padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
   overflow-y: auto; animation: up .22s ease;
 }
 @keyframes up { from { transform: translateY(30px); } to { transform: translateY(0); } }
