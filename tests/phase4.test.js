@@ -51,8 +51,8 @@ test('搜索：中文名/英文名/配料均可命中', () => {
   assert.ok(Core.filterRecipes(DRINKS, { q: '伏特加' }).length > 50);
   assert.equal(Core.filterRecipes(DRINKS, { q: 'zzz不存在的酒zzz' }).length, 0);
   // 空搜索返回全部
-  assert.equal(Core.filterRecipes(DRINKS, {}).length, 1384);
-  assert.equal(Core.filterRecipes(DRINKS, { q: '   ' }).length, 1384);
+  assert.equal(Core.filterRecipes(DRINKS, {}).length, DRINKS.length);
+  assert.equal(Core.filterRecipes(DRINKS, { q: '   ' }).length, DRINKS.length);
 });
 
 test('筛选：含酒精 / 分类', () => {
@@ -123,7 +123,7 @@ test('分页：pageCount / pageItems 按页翻且不越界', () => {
   assert.equal(Core.pageItems(DRINKS, 1, 30).length, 30);
   assert.equal(Core.pageItems(DRINKS, 2, 30).length, 30);
   assert.equal(Core.pageItems(DRINKS, 2, 30)[0].id, DRINKS[30].id, '第 2 页从第 31 条开始');
-  assert.equal(Core.pageItems(DRINKS, 9999, 30).length, 4, '超出末页则落到末页（1384 = 46×30 + 4）');
+  assert.equal(Core.pageItems(DRINKS, 9999, 30).length, DRINKS.length - 46 * 30, '超出末页则落到末页');
   assert.equal(Core.pageItems(DRINKS, 'x', 30).length, 30, '非法页码按第 1 页');
   assert.equal(Core.pageItems([], 1, 30).length, 0);
 });

@@ -14,9 +14,9 @@ test('js/data.js 存在且可加载', () => {
   assert.ok(Array.isArray(globalThis.DRINKS), 'globalThis.DRINKS 应为数组');
 });
 
-test('配方总数为 1384', () => {
+test('配方总数为 1395', () => {
   require(path.join(ROOT, 'js', 'data.js'));
-  assert.equal(globalThis.DRINKS.length, 1384);
+  assert.equal(globalThis.DRINKS.length, 1395);
 });
 
 test('每条配方字段完整', () => {
@@ -28,7 +28,7 @@ test('每条配方字段完整', () => {
     }
     assert.ok(Array.isArray(d.ingredients_zh), `${d.id} ingredients_zh 应为数组`);
     assert.ok(d.ingredients_zh.length > 0, `${d.id} 配料为空`);
-    assert.match(d.id, /^(tcdb-\d+|od-.+)$/, `${d.id} 格式非法`);
+    assert.match(d.id, /^(tcdb-\d+|od-.+|dy-.+)$/, `${d.id} 格式非法`);
     assert.match(d.name_display, /（.+）/, `${d.id} name_display 应为「中文（English）」格式`);
   }
 });
@@ -36,7 +36,7 @@ test('每条配方字段完整', () => {
 test('id 全局唯一', () => {
   require(path.join(ROOT, 'js', 'data.js'));
   const ids = new Set(globalThis.DRINKS.map((d) => d.id));
-  assert.equal(ids.size, 1384);
+  assert.equal(ids.size, globalThis.DRINKS.length);
 });
 
 test('图片路径均指向真实文件', () => {

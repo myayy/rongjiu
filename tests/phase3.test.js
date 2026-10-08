@@ -61,9 +61,9 @@ test('自制配方校验与增删', () => {
 test('allRecipes 合并主库与自制，findRecipe 双向可查', () => {
   const s = newStore();
   const before = s.allRecipes().length;
-  assert.equal(before, 1384);
+  assert.equal(before, globalThis.DRINKS.length);
   const rec = s.addCustom(sample);
-  assert.equal(s.allRecipes().length, 1385);
+  assert.equal(s.allRecipes().length, before + 1);
   assert.equal(s.allRecipes()[0].id, rec.id, '自制配方排在最前');
   assert.ok(s.findRecipe('tcdb-11000'));
   assert.equal(s.findRecipe(rec.id).name_zh, '测试鸡尾酒');

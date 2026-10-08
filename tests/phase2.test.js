@@ -16,7 +16,7 @@ test('tags.js 导出完整 API', () => {
   }
 });
 
-test('全部 1384 条都能推导口感标签', () => {
+test('全部 1395 条都能推导口感标签', () => {
   for (const d of DRINKS) {
     const t = Tags.deriveTastes(d);
     assert.ok(Array.isArray(t) && t.length > 0, `${d.id} 无口感标签`);
@@ -24,7 +24,7 @@ test('全部 1384 条都能推导口感标签', () => {
   }
 });
 
-test('全部 1384 条都能估算价格，且为 5~300 元整数', () => {
+test('全部 1395 条都能估算价格，且为 5~300 元整数', () => {
   for (const d of DRINKS) {
     const p = Tags.estimatePrice(d);
     assert.ok(Number.isInteger(p), `${d.id} 价格非整数`);

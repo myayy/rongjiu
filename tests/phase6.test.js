@@ -104,7 +104,7 @@ test('页码翻页：上一页 / 页码 / 下一页', () => {
   assert.equal(app.state.page, 47);
   html = app._env.doc.getElementById('view').innerHTML;
   assert.ok(html.includes('第 47 / 47 页'));
-  assert.ok(html.includes('共 1384 款'));
+  assert.ok(html.includes('共 ' + DRINKS.length + ' 款'));
   assert.ok(/class="pg nav"[^>]*disabled/.test(html), '末页「下一页」应禁用');
 });
 
@@ -214,7 +214,7 @@ test('设置 → 新增配方 → 校验 → 保存进推荐页', () => {
   assert.match(r.record.id, /^my-/);
   assert.equal(app.state.overlay, null);
   assert.equal(app._store.getCustom().length, 1);
-  assert.equal(app._store.allRecipes().length, 1385);
+  assert.equal(app._store.allRecipes().length, DRINKS.length + 1);
 
   const html = app._env.doc.getElementById('view').innerHTML;
   assert.ok(html.includes('融酒特调'), '新配方应立刻出现在推荐页');
@@ -240,7 +240,7 @@ test('盲盒默认全选档位，展示可选口感', () => {
   const html = app._env.doc.getElementById('view').innerHTML;
   assert.ok(html.includes('价格档位'));
   assert.ok(html.includes('可自定义'));
-  assert.ok(html.includes('符合条件：1384 款'));
+  assert.ok(html.includes('符合条件：' + DRINKS.length + ' 款'));
   for (const t of Tags.ALL_TASTE_TAGS) assert.ok(html.includes(t), '缺口感 ' + t);
 });
 
@@ -269,7 +269,7 @@ test('盲盒取消口感/档位选择会改变池大小', () => {
   const app = makeApp();
   go(app, '#/box');
   const full = app.state.pool.length;
-  assert.equal(full, 1384);
+  assert.equal(full, DRINKS.length);
 
   // 取消两个档位
   const tierIds = app.state.blind.tierIds.slice();
