@@ -113,7 +113,7 @@ function FakeDoc() {
 
   this.createElement = function (tag) { return new El(tag, doc); };
 
-  this._tabEls = ['recommend', 'cabinet', 'box', 'mixer'].map(function (name) {
+  this._tabEls = ['recommend', 'cabinet', 'box'].map(function (name) {
     var e = new El('a', doc);
     e.setAttribute('data-tab', name);
     e.className = 'tab';

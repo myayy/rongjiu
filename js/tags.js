@@ -70,7 +70,46 @@
     return out;
   }
 
-  function commonIngredients(list, topN) {
+  /* 输入框里常见的外语名 / 口语名 → 库里的标准中文名 */
+  var ING_ALIAS = {
+    vodka: '伏特加', gin: '金酒', rum: '朗姆酒', 'white rum': '白朗姆酒', 'dark rum': '黑朗姆酒',
+    whiskey: '威士忌', whisky: '威士忌', bourbon: '波本威士忌', scotch: '苏格兰威士忌',
+    tequila: '龙舌兰', brandy: '白兰地', cognac: '干邑', sake: '清酒', soju: '烧酒',
+    wine: '葡萄酒', 'red wine': '红葡萄酒', beer: '啤酒', champagne: '香槟',
+    cola: '可乐', coke: '可乐', sprite: '雪碧', soda: '苏打水', 'soda water': '苏打水',
+    'tonic water': '汤力水', lemonade: '柠檬水', 'ginger ale': '姜汁汽水',
+    lemon: '柠檬', lime: '青柠', orange: '橙子', mint: '薄荷', sugar: '糖', syrup: '糖浆',
+    honey: '蜂蜜', milk: '牛奶', cream: '淡奶油', coffee: '咖啡', tea: '茶',
+    salt: '盐', grenadine: '红石榴糖浆', bitters: '苦精', vermouth: '味美思',
+    campari: '金巴利', cointreau: '君度', kahlua: '甘露'
+  };
+
+  /* 单个词归一：别名优先，其次剥单位 */
+  function aliasOf(raw) {
+    var s = String(raw == null ? '' : raw).trim();
+    if (!s) return '';
+    return ING_ALIAS[s.toLowerCase()] || s;
+  }
+
+  /* 把一行输入拆成若干材料名：支持 / 、 , ; ； 与空格分隔
+     （placeholder 里示范的就是「朗姆酒 / 可乐 / 青柠汁」这种写法，
+      以前会被当做一个整体材料存进去，导致匹配不到任何配方） */
+  function splitIngredients(raw) {
+    var text = String(raw == null ? '' : raw).trim();
+    if (!text) return [];
+    var whole = ING_ALIAS[text.toLowerCase()];
+    if (whole) return [whole];
+    var out = [];
+    text.split(/[\/、,;；\s]+/).forEach(function (part) {
+      // 先剥单位（30毫升朗姆酒 → 朗姆酒），再查别名（vodka → 伏特加）
+      var n = aliasOf(ingredientName(part.trim()));
+      if (n && out.indexOf(n) === -1) out.push(n);
+    });
+    return out;
+  }
+
+  /* 库里出现过的全部材料名（按出现次数降序），供「常见材料」候选用 */
+  function ingredientPool(list) {
     var count = {};
     (list || []).forEach(function (d) {
       ingredientNames(d).forEach(function (n) {
@@ -80,9 +119,13 @@
     });
     return Object.keys(count).sort(function (a, b) {
       return count[b] - count[a] || a.localeCompare(b, 'zh');
-    }).slice(0, topN || 24).map(function (n) {
+    }).map(function (n) {
       return { name: n, count: count[n] };
     });
+  }
+
+  function commonIngredients(list, topN) {
+    return ingredientPool(list).slice(0, topN || 24);
   }
 
   function hasIngredient(drink, name) {
@@ -210,6 +253,187 @@
     return out.length ? out : defaultTiers();
   }
 
+  /* 类目中文映射：数据里 od- 源的 category 比较杂（既有标准分类，也有基酒/口味标签），
+     命中映射表就显示中文，未命中保留原文，避免出现看不懂的英文。 */
+  var CATEGORY_MAP = {
+    'ordinary drink': '普通饮品', 'cocktail': '鸡尾酒', 'alcoholic': '含酒精饮品',
+    'shot': '子弹杯', 'punch / party drink': '宾治 / 派对饮品', 'other / unknown': '其他',
+    'coffee / tea': '咖啡 / 茶', 'coffee': '咖啡', 'tea': '茶', 'beer': '啤酒',
+    'homemade liqueur': '自制利口酒', 'soft drink': '软饮', 'cocoa': '可可', 'shake': '奶昔',
+    'non-alcoholic': '无酒精饮品', 'mocktail': '无酒精鸡尾酒', 'virgin': '无酒精特调',
+    '饮料兑酒': '饮料兑酒', 'gin': '金酒', 'vodka': '伏特加', 'rum': '朗姆酒',
+    'tequila': '龙舌兰', 'whiskey': '威士忌', 'whisky': '威士忌', 'bourbon': '波本威士忌',
+    'brandy': '白兰地', 'cognac': '干邑', 'champagne': '香槟', 'wine': '葡萄酒',
+    'red wine': '红葡萄酒', 'sake': '清酒', 'soju': '烧酒', 'somaek': '烧啤',
+    'absinthe': '苦艾酒', 'cachaça': '卡莎萨', 'cachaca': '卡莎萨', 'mezcal': '梅斯卡尔',
+    'schnapps': '利口酒', 'liqueur': '利口酒', 'vermouth': '味美思', 'campari': '金巴利',
+    'aperol': '阿佩罗', 'kahlúa': '甘露', 'amaretto': '阿玛雷托', 'cointreau': '君度',
+    'malibu': '马利宝', 'moscato': '莫斯卡托', 'port': '波特酒', 'sherry': '雪莉酒',
+    'jameson': '尊美醇', 'jägermeister': '野格', 'fernet': '费内特',
+    'becherovka': '贝赫洛夫卡', 'southern comfort': '南方安逸', 'white rum': '白朗姆酒',
+    'black vodka': '黑伏特加', 'coconut rum': '椰子朗姆', 'aguardiente': '烧酒',
+    'raki': '拉克酒', 'ricard': '里卡尔', 'rye': '黑麦威士忌', 'rumchata': '朗姆怡茶',
+    'advocaat': '蛋黄酒', 'blue curaçao': '蓝橙皮酒', 'curaçao': '橙皮酒',
+    'lime': '青柠', 'lemon': '柠檬', 'lemonade': '柠檬水', 'orange': '橙子',
+    'apple': '苹果', 'strawberry': '草莓', 'banana': '香蕉', 'mango': '芒果',
+    'watermelon': '西瓜', 'blueberry': '蓝莓', 'blackberry': '黑莓', 'raspberry': '覆盆子',
+    'coconut': '椰子', 'coconut milk': '椰奶', 'pineapple': '菠萝', 'pomegranate': '石榴',
+    'fig': '无花果', 'avocado': '牛油果', 'dragon fruit': '火龙果', 'chikoo': '人心果',
+    'jamun': '蒲桃', 'berry': '浆果', 'melon': '哈密瓜', 'taro': '香芋',
+    'orange juice': '橙汁', 'blood orange juice': '血橙汁', 'mango juice': '芒果汁',
+    'lemon juice': '柠檬汁', 'cranberry juice': '蔓越莓汁', 'juice': '果汁',
+    'peanut butter': '花生酱', 'peanuts': '花生', 'carrot': '胡萝卜', 'spinach': '菠菜',
+    'tomato': '番茄', 'corn': '玉米', 'cereal': '谷物', 'yogurt': '酸奶', 'milk': '牛奶',
+    'buttermilk': '酪乳', 'ice cream': '冰淇淋', 'milkshake': '奶昔', 'smoothie': '冰沙',
+    'oreo': '奥利奥', 'chocolate': '巧克力', 'honey': '蜂蜜', 'vanilla': '香草',
+    'caramel': '焦糖', 'cinnamon': '肉桂', 'cardamom': '小豆蔻', 'ginger': '姜',
+    'ginger beer': '姜汁啤酒', 'mint': '薄荷', 'mint leaves': '薄荷叶', 'basil': '罗勒',
+    'lavender': '薰衣草', 'hibiscus': '洛神花', 'elderflower': '接骨木花', 'matcha': '抹茶',
+    'espresso': '浓缩咖啡', 'cold-coffee': '冷萃咖啡', 'coffee powder': '咖啡粉',
+    'earl grey': '伯爵茶', 'black tea': '红茶', 'green tea': '绿茶', 'herbal tea': '草本茶',
+    'iced tea': '冰茶', 'rooibos': '路易波士茶', 'mate': '马黛茶', 'thai tea': '泰式茶',
+    'lassi': '拉西', 'horchata': '欧洽塔', 'sherbat': '雪葩', 'sharbat': '雪葩',
+    'cremant': '克雷芒', 'sangria': '桑格利亚', 'cola': '可乐', 'coke': '可乐',
+    'soda': '苏打水', 'sparkling water': '气泡水', 'orange soda': '橙味汽水',
+    'cream soda': '奶油苏打', 'dr. pepper': '胡椒博士', 'fanta': '芬达',
+    'schweppes': '怡泉', 'grenadine': '红石榴糖浆', 'simple syrup': '糖浆',
+    'water': '水', 'ice': '冰', 'candy': '糖果', 'sparkling': '气泡',
+    'tropical': '热带风味', 'cool': '清凉', 'cold': '冰镇', 'chilled': '冰镇',
+    'hot': '热饮', 'warm': '温饮', 'fresh': '清爽', 'refreshing': '清爽',
+    'fizzy': '气泡感', 'sweet': '甜', 'bitter': '苦', 'sour': '酸', 'spicy': '辛香',
+    'strong': '浓烈', 'herbal': '草本', 'classic': '经典', 'classical': '经典',
+    'traditional': '传统', 'easy': '简易', 'healthy': '健康', 'vegan': '纯素',
+    'homemade': '自制', 'shaken': '摇和', 'low in alcohol': '低酒精',
+    'summer': '夏日', 'fall': '秋日', 'christmas': '圣诞', 'holiday': '假日',
+    'halloween': '万圣节', 'grinch': '绿毛怪', 'new york': '纽约', 'taiwan': '台湾',
+    'mexico': '墨西哥', 'mexican': '墨西哥', 'brazilian': '巴西', 'indian': '印度',
+    'sudanese': '苏丹', 'afghan': '阿富汗', 'vietnamese': '越南', 'tiki': '提基',
+    'abc': 'ABC 果汁', 'margarita': '玛格丽特', 'negroni': '内格罗尼', 'bellini': '贝利尼',
+    'martini': '马天尼', 'daiquiri': '大吉利', 'long island': '长岛',
+    'bourbon mule': '波本骡子', 'brandy alexander': '白兰地亚历山大',
+    'virgin mary': '无酒精血腥玛丽', 'gin sour': '金酒酸', 'spritz': '气泡饮',
+    'highball': '高球', 'stout': '世涛', 'corona': '科罗娜', 'blue': '蓝', 'red': '红',
+    'apple cider': '苹果西打', 'eggnog': '蛋奶酒', 'sugarcane': '甘蔗', 'soma': '苏摩酒'
+  };
+
+  /* 杯型中文映射 */
+  var GLASS_MAP = {
+    'cocktail glass': '鸡尾酒杯', 'highball glass': '高球杯', 'collins glass': '柯林杯',
+    'old-fashioned glass': '古典杯', 'shot glass': '子弹杯', 'whiskey sour glass': '威士忌酸杯',
+    'coffee mug': '马克杯', 'punch bowl': '宾治碗', 'champagne flute': '香槟杯',
+    'hurricane glass': '飓风杯', 'pint glass': '品脱杯', 'wine glass': '葡萄酒杯',
+    'martini glass': '马天尼杯', 'irish coffee cup': '爱尔兰咖啡杯', 'pitcher': '水壶',
+    'beer mug': '啤酒马克杯', 'beer pilsner': '皮尔森啤酒杯', 'margarita glass': '玛格丽特杯',
+    'white wine glass': '白葡萄酒杯', 'margarita/coupette glass': '玛格丽特 / 碟形杯',
+    'balloon glass': '球形杯', 'brandy snifter': '白兰地杯', 'nick and nora glass': '尼克与诺拉杯',
+    'cordial glass': '利口酒杯', 'beer glass': '啤酒杯', 'mason jar': '梅森罐',
+    'whiskey glass': '威士忌杯', 'pousse cafe glass': '普施咖啡杯', 'jar': '罐',
+    'copper mug': '铜杯', 'parfait glass': '芭菲杯', 'coupe glass': '碟形香槟杯',
+    'whisky glass': '威士忌杯', 'beer pilsner glass': '皮尔森啤酒杯'
+  };
+
+  function categoryLabel(raw) {
+    var k = String(raw == null ? '' : raw).trim();
+    if (!k) return '';
+    return CATEGORY_MAP[k.toLowerCase()] || k;
+  }
+
+  function glassLabel(raw) {
+    var k = String(raw == null ? '' : raw).trim();
+    if (!k) return '';
+    return GLASS_MAP[k.toLowerCase()] || k;
+  }
+
+  /* 酒精标签统一文案（含「少量含酒精」的 Optional alcohol） */
+  function alcoholLabel(raw) {
+    var s = String(raw == null ? '' : raw).toLowerCase();
+    if (!s) return '';
+    if (s.indexOf('non') === 0 || s.indexOf('alcohol-free') === 0) return '无酒精';
+    if (s.indexOf('optional') === 0) return '可选含酒精';
+    if (s.indexOf('alcoholic') === 0) return '含酒精';
+    return String(raw);
+  }
+
+  function isNonAlcoholic(drink) {
+    return /^non/i.test(String((drink && drink.alcoholic) || ''));
+  }
+
+  /* ----- 推荐页分区（混合维度，每款酒只进一个区） -----
+     数组顺序即优先级：先匹配到的分区占位，保证不重复。
+     特色区在前（兑酒 / Shot / 无酒精 / 咖啡茶），再按基酒分，最后用经典鸡尾酒兜底。 */
+  function ingHasZh(drink, words) {
+    var items = drink.ingredients_zh || [];
+    for (var i = 0; i < items.length; i++) {
+      var s = String(items[i]);
+      for (var j = 0; j < words.length; j++) if (s.indexOf(words[j]) !== -1) return true;
+    }
+    return false;
+  }
+
+  function ingHasEn(drink, re) {
+    var items = drink.ingredients_en || [];
+    for (var i = 0; i < items.length; i++) if (re.test(String(items[i]))) return true;
+    return false;
+  }
+
+  function bySpirit(zhWords, enRe) {
+    return function (d) {
+      return ingHasZh(d, zhWords) || (enRe ? ingHasEn(d, enRe) : false);
+    };
+  }
+
+  var SECTIONS = [
+    { id: 'mixer', label: '中国饮料兑酒', hint: '汽水、茶饮、椰汁都能兑',
+      test: function (d) { return /^cn-/.test(String(d.id)); } },
+    { id: 'shot', label: '一口闷 Shot', hint: '小杯一口，利落干脆',
+      test: function (d) { return categoryLabel(d.category) === '子弹杯'; } },
+    { id: 'mocktail', label: '无酒精特调', hint: '开车也能喝',
+      test: function (d) { return isNonAlcoholic(d); } },
+    { id: 'coffee', label: '咖啡与茶', hint: '提神系调饮',
+      test: function (d) { return /咖啡|茶|可可/.test(categoryLabel(d.category)); } },
+    { id: 'vodka', label: '伏特加调酒', hint: '百搭基酒',
+      test: bySpirit(['伏特加'], /\bvodka\b/i) },
+    { id: 'gin', label: '金酒调酒', hint: '草本清香',
+      test: bySpirit(['金酒', '杜松子酒'], /\bgin\b/i) },
+    { id: 'rum', label: '朗姆调酒', hint: '甘蔗甜香',
+      test: bySpirit(['朗姆'], /\brum\b/i) },
+    { id: 'whisky', label: '威士忌调酒', hint: '烟熏木质',
+      test: bySpirit(['威士忌'], /\bwhisk|\bbourbon\b|\bscotch\b|\brye\b/i) },
+    { id: 'tequila', label: '龙舌兰调酒', hint: '墨西哥风情',
+      test: bySpirit(['龙舌兰'], /\btequila\b|\bmezcal\b/i) },
+    { id: 'classic', label: '经典鸡尾酒', hint: '剩下的好酒都在这儿',
+      test: function () { return true; } }
+  ];
+
+  /* 归类：返回 [{ id, label, hint, drinks }]，空分区不返回 */
+  function groupSections(drinks) {
+    var buckets = {};
+    SECTIONS.forEach(function (s) { buckets[s.id] = []; });
+    (drinks || []).forEach(function (d) {
+      for (var i = 0; i < SECTIONS.length; i++) {
+        if (SECTIONS[i].test(d)) { buckets[SECTIONS[i].id].push(d); return; }
+      }
+    });
+    return SECTIONS.map(function (s) {
+      return { id: s.id, label: s.label, hint: s.hint, drinks: buckets[s.id] };
+    }).filter(function (s) { return s.drinks.length > 0; });
+  }
+
+  /* 单条配方属于哪个分区 */
+  function sectionOf(drink) {
+    for (var i = 0; i < SECTIONS.length; i++) {
+      if (SECTIONS[i].test(drink)) return SECTIONS[i].id;
+    }
+    return 'classic';
+  }
+
+  function sectionById(id) {
+    if (id === 'all') return { id: 'all', label: '全部配方', hint: '慢慢挑', all: true };
+    if (id === 'mine') return { id: 'mine', label: '我的自制', hint: '你自己加进去的配方', mine: true };
+    for (var i = 0; i < SECTIONS.length; i++) if (SECTIONS[i].id === id) return SECTIONS[i];
+    return null;
+  }
+
   function priceInTier(price, tier) {
     return price >= tier.min && price < tier.max;
   }
@@ -231,12 +455,23 @@
     strength: strength,
     ingredientName: ingredientName,
     ingredientNames: ingredientNames,
+    splitIngredients: splitIngredients,
+    aliasOf: aliasOf,
+    ingredientPool: ingredientPool,
     commonIngredients: commonIngredients,
     hasIngredient: hasIngredient,
     ingMatches: ingMatches,
     pantryMissing: pantryMissing,
     pantryGroups: pantryGroups,
     estimatePrice: estimatePrice,
+    categoryLabel: categoryLabel,
+    glassLabel: glassLabel,
+    alcoholLabel: alcoholLabel,
+    isNonAlcoholic: isNonAlcoholic,
+    SECTIONS: SECTIONS,
+    groupSections: groupSections,
+    sectionOf: sectionOf,
+    sectionById: sectionById,
     defaultTiers: defaultTiers,
     normalizeTiers: normalizeTiers,
     priceInTier: priceInTier,

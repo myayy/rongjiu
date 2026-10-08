@@ -44,18 +44,25 @@ function viewHtml(app) {
 
 /* ========== P5/P6：推荐页与酒柜 ========== */
 
-test('启动默认落在推荐页，渲染卡片列表与筛选栏', () => {
+test('启动默认落在推荐页，渲染分区货架与搜索框', () => {
   const app = makeApp();
   assert.equal(app.state.route.page, 'recommend');
   const html = app._env.doc.getElementById('view').innerHTML;
   assert.ok(html.includes('searchInput'), '应有搜索框');
-  assert.ok(html.includes('class="card"'), '应有卡片');
+  assert.ok(html.includes('class="shelf"'), '应有横向分区货架');
+  assert.ok(html.includes('class="shelf-card"'), '应有货架卡片');
   assert.ok(html.includes('data-act="refreshList"'), '应有「换一批」按钮');
-  assert.ok(html.includes('id="listMore"'), '应有底部哨兵');
+  assert.ok(html.includes('data-act="moreSection"'), '应有「全部 ›」入口');
   assert.ok(!html.includes('data-act="gotoPage"'), '不应再有页码翻页');
   assert.equal(app._env.doc.getElementById('pageTitle').textContent, '推荐');
   const tabs = app._env.doc.querySelectorAll('.tab');
   assert.equal(tabs[0].className, 'tab active');
+});
+
+test('底部导航只有三个：推荐 / 酒柜 / 盲盒', () => {
+  const env = makeEnv();
+  const tabs = env.doc.querySelectorAll('.tab').map((t) => t.getAttribute('data-tab'));
+  assert.deepEqual(tabs, ['recommend', 'cabinet', 'box']);
 });
 
 test('搜索输入实时过滤（不整页重渲染，保留输入）', () => {
@@ -68,6 +75,27 @@ test('搜索输入实时过滤（不整页重渲染，保留输入）', () => {
   assert.ok(!listBox.innerHTML.includes('僵尸（Zombie）'), '「莫吉托」不该命中「僵尸」');
   assert.equal(app.state.q, '莫吉托');
   assert.equal(app.state.shown, 30);
+});
+
+test('搜索排序：酒名完整命中的排在只命中单字的前面', () => {
+  const app = makeApp();
+  const input = app._env.doc.getElementById('searchInput');
+  input.value = '莫吉托';
+  input.dispatch('input', { target: input });
+
+  const byId = {};
+  app._store.allRecipes().forEach((d) => { byId[d.id] = d; });
+  const names = cardIds(app).map((id) => String(byId[id].name_display || ''));
+  assert.ok(names.length > 0);
+  assert.ok(names[0].includes('莫吉托'), '第一条应是名字里含「莫吉托」的，实际：' + names[0]);
+
+  // 逐字 OR 匹配会把「莫兰吉托」这种也捞进来，但它不该排在「蓝莓莫吉托」前面
+  const isExact = names.map((n) => n.includes('莫吉托'));
+  const firstOther = isExact.indexOf(false);
+  if (firstOther !== -1) {
+    const lastExact = isExact.lastIndexOf(true);
+    assert.ok(lastExact < firstOther, '名字含「莫吉托」的都要排在只命中单字的前面');
+  }
 });
 
 test('推荐页筛选：口味 / 材料 / 酒精强度，再次点击取消', () => {
@@ -113,15 +141,25 @@ test('筛选状态写回 URL，返回后不丢失', () => {
   assert.equal(app.state.shown, 30);
 });
 
-test('推荐页顺序按种子打散：换种子换一批，同种子不变', () => {
+/* 货架首页的全部卡片 id（按渲染顺序） */
+function shelfIds(app) {
+  return Array.from(viewHtml(app)
+    .matchAll(/shelf-card" data-act="open" data-id="([^"]+)"/g)).map((m) => m[1]);
+}
+
+test('推荐页按种子打散：换种子换一批，同种子不变', () => {
   const app1 = makeApp({ seed: 111 });
   const app2 = makeApp({ seed: 222 });
   const app1b = makeApp({ seed: 111 });
 
-  const first = cardIds(app1);
-  assert.equal(first.length, 30, '首页仍 30 张');
-  assert.notDeepEqual(first, cardIds(app2), '不同种子首页应不同');
-  assert.deepEqual(first, cardIds(app1b), '同种子首页应一致');
+  const first = shelfIds(app1);
+  assert.ok(first.length > 30, '货架首页应铺出多个分区的卡片');
+  assert.notDeepEqual(first, shelfIds(app2), '不同种子顺序应不同');
+  assert.deepEqual(first, shelfIds(app1b), '同种子顺序应一致');
+
+  // 进「全部」列表后仍是每批 30 条
+  go(app1, '#/recommend?sec=all');
+  assert.equal(cardIds(app1).length, 30);
 });
 
 test('清除筛选恢复全量并有对应按钮', () => {
@@ -135,7 +173,7 @@ test('清除筛选恢复全量并有对应按钮', () => {
   click(app._env.doc, { 'data-act': 'clearFilter' });
   assert.equal(app.state.q, '');
   html = viewHtml(app);
-  assert.ok(html.includes('class="card"'));
+  assert.ok(html.includes('class="shelf"'), '清除筛选后回到分区货架首页');
   assert.equal(app.state.shown, 30);
 });
 
@@ -167,10 +205,10 @@ test('酒柜页：空状态有引导，加入后列表出现', () => {
   assert.ok(html.includes('data-act="gotoRecommend"'));
   assert.equal(app._env.doc.getElementById('pageTitle').textContent, '酒柜');
 
-  app._store.addCabinet('od-zombie');
+  app._store.addCabinet('cn-001');
   app.render();
   html = app._env.doc.getElementById('view').innerHTML;
-  assert.ok(html.includes('僵尸（Zombie）'));
+  assert.ok(html.includes('雪碧伏特加（Sprite Vodka）'));
   assert.ok(html.includes('我的酒柜（1 瓶）'));
 
   // 空状态按钮能跳回推荐页
@@ -186,7 +224,7 @@ test('酒柜数据在重新创建 app（模拟刷新）后仍在', () => {
   const app1 = RJApp.createApp({ doc: env1.doc, win: env1.win, store: store1, core: Core, ui: UI, tags: Tags });
   app1.start();
   store1.addCabinet('tcdb-11000');
-  store1.addCabinet('od-zombie');
+  store1.addCabinet('cn-001');
 
   const env2 = makeEnv();
   const app2 = RJApp.createApp({ doc: env2.doc, win: env2.win, store: RJStore.createStore(mem), core: Core, ui: UI, tags: Tags });
@@ -195,7 +233,7 @@ test('酒柜数据在重新创建 app（模拟刷新）后仍在', () => {
   app2.onHashChange();
   const html = env2.doc.getElementById('view').innerHTML;
   assert.ok(html.includes('莫吉托'));
-  assert.ok(html.includes('僵尸'));
+  assert.ok(html.includes('雪碧伏特加'));
   assert.ok(html.includes('我的酒柜（2 瓶）'));
 });
 
@@ -238,25 +276,45 @@ test('设置 → 新增配方 → 校验 → 保存进推荐页', () => {
   assert.ok(html.includes('自制'));
 });
 
-test('自制配方详情可删除', () => {
+test('自制配方详情可删除（先弹应用内确认层）', () => {
   const app = makeApp();
   const rec = app._store.addCustom({ name_zh: '临时酒', ingredients_zh: ['水'] });
   go(app, '#/drink/' + rec.id);
   assert.ok(app._env.doc.getElementById('view').innerHTML.includes('data-act="delCustom"'));
+
+  // 点删除只弹确认层，不直接删
   app.handleAction('delCustom', { getAttribute: () => rec.id });
+  assert.equal(app.state.overlay, 'confirm');
+  assert.ok(app._env.doc.getElementById('overlay').innerHTML.includes('data-act="confirmYes"'));
+  assert.equal(app._store.getCustom().length, 1, '确认前不应删除');
+
+  // 确认后才删
+  app.handleAction('confirmYes', null);
   assert.equal(app._store.getCustom().length, 0);
+  assert.equal(app.state.overlay, null);
+});
+
+test('应用内确认层可以取消，取消则不执行', () => {
+  const app = makeApp();
+  const rec = app._store.addCustom({ name_zh: '临时酒', ingredients_zh: ['水'] });
+  go(app, '#/drink/' + rec.id);
+  app.handleAction('delCustom', { getAttribute: () => rec.id });
+  app.handleAction('confirmNo', null);
+  assert.equal(app.state.overlay, null);
+  assert.equal(app._store.getCustom().length, 1, '取消后配方还在');
 });
 
 /* ========== P7：盲盒 ========== */
 
-test('盲盒默认全选档位，展示可选口感', () => {
+test('盲盒默认不限档位（不选=不限），展示可选口感', () => {
   const app = makeApp();
   go(app, '#/box');
   assert.equal(app._env.doc.getElementById('pageTitle').textContent, '盲盒');
-  assert.equal(app.state.blind.tierIds.length, 3);
+  assert.equal(app.state.blind.tierIds.length, 0);
   const html = app._env.doc.getElementById('view').innerHTML;
   assert.ok(html.includes('价格档位'));
   assert.ok(html.includes('可自定义'));
+  assert.ok(html.includes('不选=不限'), '提示语要说明「不选=不限」');
   assert.ok(html.includes('符合条件：' + DRINKS.length + ' 款'));
   for (const t of Tags.ALL_TASTE_TAGS) assert.ok(html.includes(t), '缺口感 ' + t);
 });
@@ -282,20 +340,31 @@ test('盲盒抽一瓶并支持再来一次（结果不同）', () => {
   if (poolLen > 1) assert.notEqual(secondId, firstId, '再来一次应排除上一个结果');
 });
 
-test('盲盒取消口感/档位选择会改变池大小', () => {
+test('盲盒点选档位收窄池子，全部取消后回到不限', () => {
   const app = makeApp();
   go(app, '#/box');
   const full = app.state.pool.length;
   assert.equal(full, DRINKS.length);
 
-  // 取消两个档位
-  const tierIds = app.state.blind.tierIds.slice();
-  click(app._env.doc, { 'data-act': 'tier', 'data-val': tierIds[0] });
-  click(app._env.doc, { 'data-act': 'tier', 'data-val': tierIds[1] });
-  assert.equal(app.state.blind.tierIds.length, 1);
-  assert.ok(app.state.pool.length < full);
+  // 点一下「30元内」：只剩这一档（以前是「取消」它，与提示相反）
+  const ids = Tags.normalizeTiers(app._store.getPriceTiers()).map((t) => t.id);
+  click(app._env.doc, { 'data-act': 'tier', 'data-val': ids[0] });
+  assert.deepEqual(app.state.blind.tierIds, [ids[0]]);
+  const one = app.state.pool.length;
+  assert.ok(one < full, '只选一档应该比不限少');
+
+  // 再点一档：并集，池子不会更小
+  click(app._env.doc, { 'data-act': 'tier', 'data-val': ids[1] });
+  assert.equal(app.state.blind.tierIds.length, 2);
+  assert.ok(app.state.pool.length >= one);
   const html = app._env.doc.getElementById('view').innerHTML;
   assert.ok(html.includes('符合条件：' + app.state.pool.length + ' 款'));
+
+  // 全部取消 = 不限
+  click(app._env.doc, { 'data-act': 'tier', 'data-val': ids[0] });
+  click(app._env.doc, { 'data-act': 'tier', 'data-val': ids[1] });
+  assert.equal(app.state.blind.tierIds.length, 0);
+  assert.equal(app.state.pool.length, full);
 
   // 选一个口感
   click(app._env.doc, { 'data-act': 'taste', 'data-val': '甜' });
@@ -317,12 +386,12 @@ test('盲盒结果可直接加入酒柜', () => {
 });
 
 test('盲盒条件无匹配时给出提示且按钮禁用', () => {
-  const app = makeApp();
+  // 造一个永远匹配不到任何酒的档位（价格区间远高于估算价）
+  const app = makeApp({ tiers: [{ label: '天价档', min: 200000, max: 300000 }] });
   go(app, '#/box');
-  // 取消全部档位
-  app.state.blind.tierIds.slice().forEach((id) => {
-    click(app._env.doc, { 'data-act': 'tier', 'data-val': id });
-  });
+  const ids = Tags.normalizeTiers(app._store.getPriceTiers()).map((t) => t.id);
+  click(app._env.doc, { 'data-act': 'tier', 'data-val': ids[0] });
+  assert.equal(app.state.pool.length, 0);
   const html = app._env.doc.getElementById('view').innerHTML;
   assert.ok(html.includes('放宽'));
   assert.ok(html.includes('disabled'));
@@ -337,7 +406,7 @@ test('盲盒自定义档位（用户改过的）生效', () => {
     { label: '土豪', min: 20, max: 99999 }
   ] });
   go(app, '#/box');
-  assert.equal(app.state.blind.tierIds.length, 2);
+  assert.equal(app.state.blind.tierIds.length, 0);
   const html = app._env.doc.getElementById('view').innerHTML;
   assert.ok(html.includes('超便宜'));
   assert.ok(html.includes('土豪'));
@@ -386,7 +455,7 @@ test('导入：合并与覆盖均生效，非法文件报错不破坏数据', ()
   const backup = JSON.stringify(a._store.exportBackup());
 
   const b = makeApp();
-  b._store.addCabinet('od-zombie');
+  b._store.addCabinet('cn-001');
   go(b, '#/cabinet');
 
   let r = b.applyImport(backup, 'merge');
@@ -397,7 +466,7 @@ test('导入：合并与覆盖均生效，非法文件报错不破坏数据', ()
   assert.equal(r.ok, false);
   assert.match(r.error, /JSON/);
   assert.equal(b._store.getCabinet().length, 2, '失败不应影响现有数据');
-  assert.ok(b._env.doc.getElementById('view').innerHTML.includes('僵尸'), '页面仍在酒柜');
+  assert.ok(b._env.doc.getElementById('view').innerHTML.includes('雪碧伏特加'), '页面仍在酒柜');
 
   r = b.applyImport(backup, 'replace');
   assert.equal(r.ok, true);
@@ -444,9 +513,9 @@ test('价格档位编辑：增删改校验并保存', () => {
   assert.equal(app.tiers()[3].max, Infinity, '读取时还原为不限');
   assert.ok(Tags.tierOf(99999, app.tiers()), '99999 元仍落在顶级档');
 
-  // 档位变化后盲盒立即使用新档位
+  // 档位变化后盲盒立即使用新档位，且选中状态回到「不限」（旧 id 已失效）
   go(app, '#/box');
-  assert.equal(app.state.blind.tierIds.length, 4);
+  assert.equal(app.state.blind.tierIds.length, 0);
   assert.ok(app._env.doc.getElementById('view').innerHTML.includes('特便宜'));
 });
 
@@ -462,7 +531,7 @@ test('价格档位校验：max<=min 与空档位被拒绝', () => {
   app.state.tierDraft = [{ label: '   ', min: 0, max: 10 }];
   r = app.saveTiers();
   assert.equal(r.ok, false);
-  assert.ok(app._env.doc.getElementById('overlay').innerHTML.includes('至少保留一个档位'));
+  assert.ok(app._env.doc.getElementById('overlay').innerHTML.includes('没填名称'), '空档位应提示而不是静默丢弃');
 });
 
 test('恢复默认档位', () => {
@@ -477,11 +546,46 @@ test('恢复默认档位', () => {
   assert.equal(app._store.getPriceTiers().length, 3);
 });
 
+test('价格档位弹层可以取消退出，不用非得保存', () => {
+  const app = makeApp();
+  app.handleAction('tiers', null);
+  const html = app._env.doc.getElementById('overlay').innerHTML;
+  assert.ok(html.includes('data-act="closeOverlay"'), '档位弹层应有取消按钮');
+  assert.ok(html.includes('取消'));
+
+  click(app._env.doc, { 'data-act': 'closeOverlay' });
+  assert.equal(app.state.overlay, null);
+  assert.equal(app._env.doc.getElementById('overlay').className, 'overlay hidden');
+});
+
+test('点遮罩空白处关闭弹层，点弹层内部不关', () => {
+  const app = makeApp();
+  const ov = app._env.doc.getElementById('overlay');
+
+  app.handleAction('tiers', null);
+  assert.equal(app.state.overlay, 'tiers');
+
+  // 点在弹层内部（target 不是遮罩本身）：不关闭
+  ov.dispatch('click', { target: new El('div', app._env.doc) });
+  assert.equal(app.state.overlay, 'tiers');
+
+  // 点在遮罩空白处：关闭
+  ov.dispatch('click', { target: ov });
+  assert.equal(app.state.overlay, null);
+  assert.equal(ov.className, 'overlay hidden');
+});
+
 test('清空全部数据后酒柜与自制均为空', () => {
   const app = makeApp();
   app._store.addCabinet('tcdb-11000');
   app._store.addCustom({ name_zh: 'x', ingredients_zh: ['水'] });
+
+  // 先弹应用内确认层，点「确定清空」才真的清
   app.handleAction('clearAll', null);
+  assert.equal(app.state.overlay, 'confirm');
+  assert.deepEqual(app._store.getCabinet(), ['tcdb-11000'], '确认前不该动数据');
+  app.handleAction('confirmYes', null);
+
   assert.deepEqual(app._store.getCabinet(), []);
   assert.deepEqual(app._store.getCustom(), []);
   go(app, '#/cabinet');

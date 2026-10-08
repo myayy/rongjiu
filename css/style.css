@@ -150,12 +150,16 @@ html, body {
   height: 210px; display: flex; align-items: center; justify-content: center;
   font-size: 46px; color: var(--accent);
 }
-.detail-name { font-size: 20px; font-weight: 800; margin: 14px 0 6px; }
-.detail-section { background: var(--card); border-radius: var(--radius); padding: 12px 14px; margin-top: 10px; box-shadow: var(--shadow); }
-.detail-section h3 { margin: 0 0 8px; font-size: 14px; color: var(--accent); }
-.detail-section ul { margin: 0; padding-left: 18px; }
-.detail-section li { font-size: 14px; line-height: 1.75; }
-.detail-section p { margin: 0; font-size: 14px; line-height: 1.8; white-space: pre-wrap; }
+.detail-name { font-size: 22px; font-weight: 800; line-height: 1.35; margin: 16px 0 8px; }
+.detail-section { background: var(--card); border-radius: var(--radius); padding: 14px 16px; margin-top: 12px; box-shadow: var(--shadow); }
+.detail-section h3 { margin: 0 0 8px; font-size: 15px; font-weight: 800; color: var(--accent); }
+.detail-section ul { margin: 0; padding-left: 20px; }
+.detail-section li { font-size: 15px; line-height: 1.9; }
+.detail-section p { margin: 0; font-size: 15px; line-height: 1.9; white-space: pre-wrap; word-break: break-word; }
+/* 英文原文只作对照，弱化处理，别抢版面 */
+.detail-section.en-note { background: transparent; box-shadow: none; padding: 2px 4px; margin-top: 8px; }
+.detail-section.en-note h3 { font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
+.detail-section.en-note p { font-size: 12px; color: var(--muted); line-height: 1.7; }
 .back-btn {
   border: none; background: var(--card); border: 1px solid var(--line);
   border-radius: 10px; padding: 6px 12px; font-size: 13px; cursor: pointer; margin-bottom: 10px;
@@ -203,6 +207,16 @@ html, body {
 .form input:focus, .form textarea:focus, .form select:focus { border-color: var(--accent); }
 .form textarea { resize: vertical; min-height: 84px; line-height: 1.6; }
 .form .err { color: var(--red); font-size: 12px; margin-top: 6px; min-height: 16px; }
+/* 照片选择：藏起原生 file 控件（「选择文件 未选择任何文件」太出戏），用样式化的 label 触发 */
+.img-pick { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.img-pick input[type=file] { display: none; }
+.form label.img-pick-btn {
+  display: inline-block; margin: 0; flex: 0 0 auto; cursor: pointer;
+  border: 1px solid var(--line); background: var(--card); color: var(--accent);
+  border-radius: 10px; padding: 9px 14px; font-size: 13px; font-weight: 700;
+}
+.img-pick-btn:active { background: var(--accent-soft); }
+.img-pick-hint { font-size: 11px; color: var(--muted); }
 .img-preview { margin-top: 8px; }
 .img-preview img {
   width: 100%; max-height: 220px; object-fit: cover;
@@ -233,6 +247,7 @@ html, body {
 @keyframes up { from { transform: translateY(30px); } to { transform: translateY(0); } }
 .sheet h2 { margin: 0 0 4px; font-size: 17px; }
 .sheet .sub { font-size: 12px; color: var(--muted); margin: 0 0 12px; }
+.sheet.confirm p { font-size: 14px; line-height: 1.7; color: #55504a; margin: 6px 0 4px; }
 .menu-item {
   display: flex; align-items: center; justify-content: space-between;
   background: var(--card); border-radius: 12px; padding: 13px 14px;
@@ -242,9 +257,16 @@ html, body {
 .menu-item.danger { color: var(--red); }
 .menu-item .val { color: var(--muted); font-size: 12px; }
 .tier-row { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
-.tier-row input { flex: 1; }
-.tier-row input.tier-label { flex: 2; }
-.tier-row .del { border: none; background: #f1ede4; border-radius: 8px; width: 32px; height: 34px; cursor: pointer; color: var(--red); font-size: 15px; }
+/* 三个输入框 + 删除按钮必须挤在一行里：flex-basis 归零并放开 min-width，
+   否则 input 的固有宽度（约 170px）撑爆弹层，右侧「最高价」会被裁掉 */
+.tier-row input {
+  flex: 1 1 0; min-width: 0; width: 100%;
+  padding: 8px 9px; border: 1px solid var(--line); border-radius: 8px;
+  font-size: 13px; font-family: inherit; background: #fff; outline: none;
+}
+.tier-row input:focus { border-color: var(--accent); }
+.tier-row input.tier-label { flex: 1.6 1 0; }
+.tier-row .del { flex: 0 0 auto; border: none; background: #f1ede4; border-radius: 8px; width: 32px; height: 34px; cursor: pointer; color: var(--red); font-size: 15px; }
 .about p { font-size: 13px; line-height: 1.8; color: #55504a; margin: 8px 0; }
 .about a { color: var(--accent); }
 
@@ -275,6 +297,13 @@ html, body {
 .rated-item .card { margin-bottom: 2px; }
 
 /* ---- 浏览历史 ---- */
+/* 清空历史：靠右的小按钮，别用整行大按钮免得误点 */
+.hist-head { display: flex; justify-content: flex-end; margin: -24px 0 8px; }
+.hist-clear {
+  border: 1px solid var(--line); background: var(--card); color: var(--muted);
+  border-radius: 8px; padding: 3px 10px; font-size: 12px; cursor: pointer;
+}
+.hist-clear:active { background: var(--accent-soft); color: var(--accent); }
 .hist-item { margin-bottom: 10px; }
 .hist-item .card { margin-bottom: 2px; }
 .hist-foot { display: flex; align-items: center; justify-content: space-between; padding: 0 4px 0 2px; }
@@ -284,6 +313,61 @@ html, body {
   border-radius: 8px; width: 26px; height: 26px; font-size: 12px; cursor: pointer;
 }
 .hist-del:active { background: var(--accent-soft); color: var(--accent); }
+
+/* ---- 推荐页货架（横向分区，像视频网站首页） ---- */
+.shelf { margin-bottom: 18px; }
+.shelf-head { display: flex; align-items: flex-end; justify-content: space-between; margin: 0 2px 8px; }
+.shelf-title { display: flex; align-items: baseline; gap: 8px; }
+.shelf-title h3 { margin: 0; font-size: 16px; font-weight: 800; }
+.shelf-hint { font-size: 11px; color: var(--muted); }
+.shelf-more {
+  border: none; background: none; color: var(--accent);
+  font-size: 12px; cursor: pointer; padding: 2px 4px; white-space: nowrap;
+}
+.shelf-row { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 8px; }
+/* 横向滚动条平时隐形（10 个分区就有 10 条，太吵），鼠标悬停时才露出来，保留可拖拽的抓手 */
+.shelf-row::-webkit-scrollbar { height: 6px; }
+.shelf-row::-webkit-scrollbar-thumb { background: transparent; border-radius: 999px; }
+.shelf-row:hover::-webkit-scrollbar-thumb { background: #d9d3c6; }
+.shelf-row::-webkit-scrollbar-track { background: transparent; }
+.shelf-card { flex: 0 0 116px; cursor: pointer; }
+.shelf-imgbox { width: 116px; height: 116px; border-radius: 12px; overflow: hidden; background: var(--accent-soft); }
+.shelf-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.shelf-img.placeholder { display: flex; align-items: center; justify-content: center; font-size: 34px; }
+.shelf-name {
+  font-size: 12px; font-weight: 600; margin-top: 6px; line-height: 1.35;
+  height: 2.7em; overflow: hidden;
+}
+.shelf-meta { font-size: 10px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---- 分区列表页头部 ---- */
+.sec-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.sec-title { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.sec-title h3 { margin: 0; font-size: 16px; font-weight: 800; }
+.sec-count { font-size: 11px; color: var(--muted); }
+
+/* ---- 酒柜页底部：浏览历史入口 ---- */
+.entry-btn {
+  width: 100%; display: flex; align-items: center; gap: 8px; text-align: left;
+  border: 1px solid var(--line); background: var(--card); cursor: pointer;
+  border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow);
+  font-size: 14px; color: inherit; font-family: inherit;
+}
+.entry-btn:active { background: var(--accent-soft); }
+.entry-ico { font-size: 16px; }
+.entry-label { font-weight: 700; }
+.entry-val { margin-left: auto; font-size: 12px; color: var(--muted); }
+.entry-arrow { color: var(--muted); font-size: 16px; }
+/* 货架首页顶部的「浏览全部」：比酒柜页的入口矮一点，别太占版面 */
+.entry-btn.compact { padding: 10px 12px; margin-bottom: 14px; font-size: 13px; }
+
+/* 详情页信息标签比卡片上的稍大，方便阅读 */
+.kv .chip { font-size: 12px; padding: 4px 10px; }
+
+/* ---- 我的材料：常见材料建议区 ---- */
+.suggest-hint { font-size: 11px; color: var(--muted); margin: 12px 0 6px; }
+/* 常见材料一次全列出来，不再塞进带滚动条的窄框（25 个要滚着看太憋屈） */
+#pantrySuggest .chips { margin-top: 0; }
 
 .toast {
   position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%);

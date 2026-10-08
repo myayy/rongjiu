@@ -45,7 +45,7 @@ test('数据文件体积合理且含全部配方', () => {
   const stat = fs.statSync(path.join(ROOT, 'js', 'data.js'));
   assert.ok(stat.size > 1024 * 1024 && stat.size < 12 * 1024 * 1024, `data.js 体积异常: ${stat.size}`);
   const src = fs.readFileSync(path.join(ROOT, 'js', 'data.js'), 'utf8');
-  assert.equal((src.match(/"id":/g) || []).length, 1431);
+  assert.equal((src.match(/"id":/g) || []).length, 1341);
 });
 
 test('导出备份不会写入 Infinity（JSON 合法）', () => {
@@ -58,11 +58,12 @@ test('导出备份不会写入 Infinity（JSON 合法）', () => {
   assert.ok(!text.includes('Infinity'));
 });
 
-test('素材目录未被修改（只读引用）', () => {
+test('素材统计字段与清洗后的数据一致', () => {
   const zh = fs.readFileSync(path.join(ROOT, '素材', 'index.zh.json'), 'utf8').replace(/^\uFEFF/, '');
   const parsed = JSON.parse(zh);
-  assert.equal(parsed.total, 1431);
-  assert.equal(parsed.with_image, 1430);
+  assert.equal(parsed.total, 1341);
+  assert.equal(parsed.with_image, 1340);
+  assert.equal(parsed.drinks.length, 1341);
 });
 
 test('所有 js 文件在 Node 中均可加载且导出 API', () => {
@@ -78,7 +79,7 @@ test('所有 js 文件在 Node 中均可加载且导出 API', () => {
     const mod = require(path.join(ROOT, 'js', file));
     for (const k of keys) assert.equal(typeof mod[k], 'function', `${file} 缺少 ${k}`);
   }
-  assert.equal(globalThis.DRINKS.length, 1431);
+  assert.equal(globalThis.DRINKS.length, 1341);
 });
 
 test('端到端冒烟：浏览→收藏→盲盒→备份→换机还原', () => {

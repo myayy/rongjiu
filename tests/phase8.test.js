@@ -26,6 +26,8 @@ function makeApp(opts) {
   app._env = env;
   app._store = store;
   app.start();
+  // 推荐页默认是分区货架；本文件测的是列表行为，先切到「全部」列表
+  go(app, '#/recommend?sec=all');
   return app;
 }
 

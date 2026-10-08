@@ -118,26 +118,29 @@ test('酒柜页「浏览历史」按时间倒序，显示年月日时分', () =>
   let t = T0;
   const app = makeApp({ seed: 111, now: () => (t += 60000) });
   click(app._env.doc, { 'data-act': 'open', 'data-id': 'tcdb-11000' });
-  click(app._env.doc, { 'data-act': 'open', 'data-id': 'od-zombie' });
-  go(app, '#/cabinet');
+  click(app._env.doc, { 'data-act': 'open', 'data-id': 'cn-001' });
+  go(app, '#/history');
   const html = viewHtml(app);
   assert.ok(html.includes('浏览历史（2）'));
   assert.ok(html.includes('data-act="clearHistory"'));
   assert.ok(/hist-time">\d{4}年\d{2}月\d{2}日 \d{2}点\d{2}分</.test(html), '应有「xxxx年xx月xx日 xx点xx分」');
-  assert.ok(html.indexOf('僵尸') < html.indexOf('莫吉托'), '后看的应排在前');
+  assert.ok(html.indexOf('雪碧伏特加') < html.indexOf('莫吉托'), '后看的应排在前');
 });
 
 test('删除单条历史 与 清空历史', () => {
   const app = makeApp({ seed: 111, now: () => T0 });
   click(app._env.doc, { 'data-act': 'open', 'data-id': 'tcdb-11000' });
-  click(app._env.doc, { 'data-act': 'open', 'data-id': 'od-zombie' });
-  go(app, '#/cabinet');
+  click(app._env.doc, { 'data-act': 'open', 'data-id': 'cn-001' });
+  go(app, '#/history');
 
   click(app._env.doc, { 'data-act': 'delHistory', 'data-val': 'tcdb-11000' });
-  assert.deepEqual(app._store.getHistory().map((x) => x.id), ['od-zombie']);
+  assert.deepEqual(app._store.getHistory().map((x) => x.id), ['cn-001']);
   assert.ok(viewHtml(app).includes('浏览历史（1）'));
 
   click(app._env.doc, { 'data-act': 'clearHistory' });
+  assert.equal(app.state.overlay, 'confirm', '清空历史要先弹应用内确认层');
+  assert.deepEqual(app._store.getHistory().map((x) => x.id), ['cn-001'], '确认前不清');
+  click(app._env.doc, { 'data-act': 'confirmYes' });
   assert.deepEqual(app._store.getHistory(), []);
   assert.ok(!viewHtml(app).includes('浏览历史'), '清空后整块隐藏');
 });
@@ -148,7 +151,7 @@ test('浏览历史持久化：重新创建 app 后仍在', () => {
   click(app1._env.doc, { 'data-act': 'open', 'data-id': 'tcdb-11000' });
 
   const app2 = makeApp({ seed: 222, storage: mem });
-  go(app2, '#/cabinet');
+  go(app2, '#/history');
   assert.deepEqual(app2._store.getHistory().map((x) => x.id), ['tcdb-11000']);
   assert.ok(viewHtml(app2).includes('2026年10月08日 21点30分'), '时间文案应还原');
 });
@@ -157,7 +160,7 @@ test('浏览历史：配方已不存在时该条自动跳过', () => {
   const app = makeApp({ seed: 111, now: () => T0 });
   app._store.pushHistory('已删除的配方', T0);
   app._store.pushHistory('tcdb-11000', T0);
-  go(app, '#/cabinet');
+  go(app, '#/history');
   assert.ok(viewHtml(app).includes('浏览历史（1）'), '无效记录不计入');
 });
 

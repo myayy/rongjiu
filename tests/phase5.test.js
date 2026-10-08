@@ -144,8 +144,10 @@ test('价格档位编辑器支持增删改', () => {
   assert.ok(html.includes('data-act="addTier"'));
   assert.ok(html.includes('data-act="saveTiers"'));
   assert.ok(html.includes('data-act="resetTiers"'));
-  // 最高档 Infinity 显示为空（留空=不限）
-  assert.ok(html.includes('placeholder="最高(留空=不限)"'));
+  assert.ok(html.includes('data-act="closeOverlay"'), '要有取消按钮，不能只能保存才能退出');
+  // 最高档 Infinity 显示为空（留空=不限，说明在弹层副标题里）
+  assert.ok(html.includes('placeholder="最高"'));
+  assert.ok(html.includes('留空表示不限'));
 });
 
 test('关于页不含任何数据来源信息', () => {

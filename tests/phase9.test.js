@@ -43,31 +43,28 @@ function cardIds(app) {
   return Array.from(viewHtml(app).matchAll(/class="card" data-act="open" data-id="([^"]+)"/g)).map((m) => m[1]);
 }
 
-/* ========== 兑酒专区 ========== */
+/* ========== 兑酒已并入推荐页分区 ========== */
 
-test('兑酒页：路由、标题、tab 高亮、渲染出 cn 配方', () => {
-  assert.equal(Core.parseHash('#/mixer').page, 'mixer');
+test('兑酒并入推荐页：货架有「中国饮料兑酒」分区，可进分区列表', () => {
   const app = makeApp({ seed: 111 });
-  go(app, '#/mixer');
-  assert.equal(app.state.route.page, 'mixer');
-  assert.equal(app._env.doc.getElementById('pageTitle').textContent, '兑酒');
+  assert.ok(viewHtml(app).includes('中国饮料兑酒'), '货架首页应有兑酒分区');
+
+  go(app, '#/recommend?sec=mixer');
+  assert.equal(app.state.route.page, 'recommend');
+  assert.equal(app._env.doc.getElementById('pageTitle').textContent, '推荐');
 
   const cnCount = DRINKS.filter((d) => d.id.indexOf('cn-') === 0).length;
   assert.equal(cnCount, 36, '应有 36 条兑酒配方');
   const ids = cardIds(app);
-  assert.equal(ids.length, cnCount);
-  assert.ok(ids.every((id) => id.indexOf('cn-') === 0), '兑酒页只列 cn 配方');
-  assert.ok(viewHtml(app).includes('中国饮料 × 酒'));
-
-  const tabs = app._env.doc.querySelectorAll('.tab');
-  const mixerTab = tabs.filter((t) => t.getAttribute('data-tab') === 'mixer')[0];
-  assert.ok(mixerTab, '应存在 mixer tab');
-  assert.equal(mixerTab.className, 'tab active');
+  assert.equal(ids.length, 30, '首批 30 条');
+  assert.ok(ids.every((id) => id.indexOf('cn-') === 0), '兑酒分区只列 cn 配方');
+  assert.ok(viewHtml(app).includes('已显示 30 / 36'), '该分区共 36 条');
+  assert.ok(viewHtml(app).includes('data-act="backShelf"'), '分区列表应有返回全部');
 });
 
-test('兑酒页配方可进详情、可加入酒柜', () => {
+test('兑酒分区的配方可进详情、可加入酒柜', () => {
   const app = makeApp({ seed: 111 });
-  go(app, '#/mixer');
+  go(app, '#/recommend?sec=mixer');
   const id = cardIds(app)[0];
   click(app._env.doc, { 'data-act': 'open', 'data-id': id });
   app.onHashChange();
@@ -77,23 +74,25 @@ test('兑酒页配方可进详情、可加入酒柜', () => {
   assert.deepEqual(app._store.getCabinet(), [id]);
 });
 
-test('切到兑酒页再回推荐页：不恢复旧滚动位置（不干扰详情返回）', () => {
+test('切到别的 tab 再回推荐页：不恢复旧滚动位置（不干扰详情返回）', () => {
   const app = makeApp({ seed: 111 });
+  go(app, '#/recommend?sec=all');
   const v = app._env.doc.getElementById('view');
   v.clientHeight = 600; v.scrollHeight = 3000; v.scrollTop = 2600;
   v.dispatch('scroll', {});
   assert.equal(app.state.shown, 60);
   v.scrollTop = 4200;
 
-  go(app, '#/mixer');
+  go(app, '#/cabinet');
   assert.equal(app.state.shown, 30, '切页应复位列表');
   go(app, '#/recommend');
   assert.equal(app.state.shown, 30);
   assert.equal(v.scrollTop, 0, '回推荐页应从顶部开始');
 });
 
-test('进详情再返回仍然恢复滚动位置（兑酒 tab 不影响）', () => {
+test('进详情再返回仍然恢复滚动位置（切 tab 不影响）', () => {
   const app = makeApp({ seed: 111 });
+  go(app, '#/recommend?sec=all');
   const v = app._env.doc.getElementById('view');
   v.clientHeight = 600; v.scrollHeight = 3000; v.scrollTop = 2600;
   v.dispatch('scroll', {});
@@ -231,6 +230,7 @@ test('详情页点星 → 4 星；再点同一星 → 取消；记得住', () =>
 
 test('推荐页卡片显示「已喝过 ★N」', () => {
   const app = makeApp({ seed: 111 });
+  go(app, '#/recommend?sec=all');
   const first = cardIds(app)[0];
   assert.ok(first, '应有卡片');
   assert.ok(!viewHtml(app).includes('已喝过'), '没评过分就不显示标签');
@@ -242,11 +242,11 @@ test('推荐页卡片显示「已喝过 ★N」', () => {
 test('酒柜页「喝过的酒」按星级降序', () => {
   const app = makeApp({ seed: 111 });
   app._store.setRating('tcdb-11000', 3);
-  app._store.setRating('od-zombie', 5);
+  app._store.setRating('cn-001', 5);
   go(app, '#/cabinet');
   const html = viewHtml(app);
   assert.ok(html.includes('喝过的酒（2）'));
-  assert.ok(html.indexOf('僵尸') < html.indexOf('莫吉托'), '5 星应排在 3 星前面');
+  assert.ok(html.indexOf('雪碧伏特加') < html.indexOf('莫吉托'), '5 星应排在 3 星前面');
   assert.ok(html.includes('data-act="rate"'));
 });
 

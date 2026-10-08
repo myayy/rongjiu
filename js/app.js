@@ -2,7 +2,7 @@
 (function (global) {
   'use strict';
 
-  var PAGE_TITLE = { recommend: '推荐', cabinet: '酒柜', box: '盲盒', mixer: '兑酒', drink: '详情' };
+  var PAGE_TITLE = { recommend: '推荐', cabinet: '酒柜', box: '盲盒', history: '浏览历史', drink: '详情' };
   var PAGE_SIZE = 30;          // 每批加载条数
   var BOTTOM_THRESHOLD = 240;  // 距底部多少像素算「快到底」
   var ING_CHIPS = 60;          // 推荐页材料筛选胶囊个数
@@ -35,6 +35,7 @@
       tierDraft: null,
       recipeDraft: null,
       overlay: null,
+      confirm: null,        // 应用内确认弹层的文案与「确定」回调
       pool: []
     };
 
@@ -65,8 +66,22 @@
       renderOverlay();
     }
 
+    /* 应用内确认弹层：不依赖原生 confirm（内置浏览器/被拦截时会静默失效） */
+    function openConfirm(opts) {
+      state.confirm = {
+        title: opts.title || '请确认',
+        text: opts.text || '',
+        okLabel: opts.okLabel || '确定',
+        cancelLabel: opts.cancelLabel || '取消',
+        danger: !!opts.danger,
+        run: opts.run
+      };
+      openOverlay('confirm');
+    }
+
     function closeOverlay() {
       state.overlay = null;
+      state.confirm = null;
       state.tierDraft = null;
       state.recipeDraft = null;
       var ov = doc.getElementById('overlay');
@@ -105,15 +120,27 @@
         if (!seen[raw[k].id]) { seen[raw[k].id] = 1; uniq.push(raw[k]); }
       }
       var out = core.filterRecipes(uniq, currentFilters(), tags);
+      var sec = currentSec();
+      // sec='all' 是「浏览全部」不做过滤；sec='mine' 只看自制；其余按分区归类过滤
+      if (sec === 'mine') out = out.filter(function (d) { return String(d.id).indexOf('my-') === 0; });
+      else if (sec && sec !== 'all') out = out.filter(function (d) { return tags.sectionOf(d) === sec; });
       if (state.q) out = rankByQuery(out, state.q);
       return out;
     }
 
-    /* 搜索时按命中 token 数降序排（稳定排序，同分保持洗牌顺序）：
-       逐字 OR 匹配很宽松，把「命中字更多」的排前面才可用 */
+    /* 当前所在分区（推荐页 ?sec=xxx），空串表示分区首页 */
+    function currentSec() {
+      return (state.route.q && state.route.q.sec) || '';
+    }
+
+    /* 搜索排序（稳定排序，同分保持洗牌顺序）：
+       ① 酒名里出现「完整查询串」的最相关（搜「莫吉托」时先给莫吉托，而不是只含「吉」的酒）
+       ② 其次按命中的字/词数量降序 —— 逐字 OR 匹配很宽松，命中字多的排前面才可用 */
     function rankByQuery(list, q) {
       var tokens = core.queryTokens(q);
       if (!tokens.length) return list;
+      var raw = String(q).trim().toLowerCase();
+      var rawFlat = raw.replace(/\s+/g, '');
       return list.map(function (d, idx) {
         var hay = [d.name, d.name_zh, d.name_display, d.category, d.glass]
           .concat(d.ingredients_zh || []).concat(d.ingredients_en || []).join(' ').toLowerCase();
@@ -121,9 +148,13 @@
         for (var i = 0; i < tokens.length; i++) {
           if (hay.indexOf(tokens[i]) !== -1) hit++;
         }
-        return { d: d, hit: hit, idx: idx };
+        var name = [d.name_zh, d.name_display, d.name].join(' ').toLowerCase();
+        var nameFlat = name.replace(/\s+/g, '');
+        var exact = (raw && (name.indexOf(raw) !== -1
+          || (rawFlat && nameFlat.indexOf(rawFlat) !== -1))) ? 1 : 0;
+        return { d: d, hit: hit, exact: exact, idx: idx };
       }).sort(function (a, b) {
-        return b.hit - a.hit || a.idx - b.idx;
+        return b.exact - a.exact || b.hit - a.hit || a.idx - b.idx;
       }).map(function (x) { return x.d; });
     }
 
@@ -138,15 +169,21 @@
       };
     }
 
+    /* 推荐页两种形态：
+       ① 没筛选、也没进分区 → 货架首页（横向分区，像视频网站那样左右滑）
+       ② 有搜索/筛选，或从「全部 ›」进了某个分区 → 纵向列表 */
     function renderRecommend() {
+      if (!currentSec() && !hasFilter()) { renderShelf(); return; }
       var parts = recommendParts();
       state.lastTotal = parts.total;
-      var html = ui.filterBarHtml({
-        q: state.q,
-        tastes: state.tastes,
-        ingredients: state.ingredients,
-        strength: state.strength
-      }, tags.commonIngredients(store.allRecipes(), ING_CHIPS), tags)
+      var sec = currentSec();
+      var html = (sec ? ui.sectionHeadHtml(tags.sectionById(sec), parts.total) : '')
+        + ui.filterBarHtml({
+          q: state.q,
+          tastes: state.tastes,
+          ingredients: state.ingredients,
+          strength: state.strength
+        }, tags.commonIngredients(store.allRecipes(), ING_CHIPS), tags)
         + '<div id="listBox">' + parts.listBox + '</div>' + parts.footer;
       view().innerHTML = html;
       // 同步 listBox（Node 假 DOM 中与 view 分离；真实 DOM 中为幂等）
@@ -157,6 +194,27 @@
       // 注意：这里不要动 scrollTop —— 「加载更多」必须保持当前位置
     }
 
+    /* 货架首页：内置配方按分区横向铺开，自制配方单独一排放最前 */
+    function renderShelf() {
+      var custom = store.getCustom();
+      var builtin = store.allRecipes().filter(function (d) {
+        return String(d.id).indexOf('my-') !== 0;
+      });
+      // 按本次会话种子打散，保证「换一批」在货架首页也有效
+      var sections = tags.groupSections(core.shuffle(builtin, state.seed));
+      if (custom.length) {
+        sections.unshift({ id: 'mine', label: '我的自制', hint: '你自己加进去的配方', drinks: custom });
+      }
+      state.lastTotal = sections.reduce(function (n, s) { return n + s.drinks.length; }, 0);
+      state.shown = PAGE_SIZE;   // 回首页视为重新浏览
+      view().innerHTML = ui.searchOnlyHtml(state.q)
+        + ui.allEntryHtml(store.allRecipes().length)
+        + ui.shelfHtml(sections, tags, 12);
+      bindSearch();
+      // 清空搜索等场景会落回货架首页，这里要把 URL 一并复位，别留着旧的 ?q=
+      syncHash();
+    }
+
     /* 把推荐页筛选条件写回 URL：
        进详情再返回时能回到原来的筛选，而不是丢掉。
        用 replaceState 不新增历史记录（file:// 下被拒时退回直接改 hash）。 */
@@ -165,6 +223,7 @@
       var hash = core.buildHash({
         page: 'recommend',
         q: {
+          sec: currentSec(),
           q: state.q,
           tastes: state.tastes.join(','),
           ingredients: state.ingredients.join(','),
@@ -212,6 +271,8 @@
 
     function onViewScroll() {
       if (state.route.page !== 'recommend') return;
+      // 货架首页是横向分区，没有「加载更多」，不要触发触底追加
+      if (!currentSec() && !hasFilter()) return;
       var v = view();
       if (!v) return;
       if (!isNearBottom(v)) return;
@@ -254,7 +315,47 @@
       };
     }
 
-    /* 酒柜页：我的材料 → 能做的酒 → 我的酒柜 → 喝过的酒 */
+    /* 一次性迁移：早期版本会把「朗姆酒 / 可乐 / 青柠汁」整串存成一个材料，
+       这里按分隔符 / 别名 / 单位重新拆开重建，脏标签自动消失。
+       幂等：已经干净的数据跑完不会改动，也不写盘。 */
+    function migratePantry() {
+      var list = store.getPantry();
+      if (!list.length) return false;
+      var fixed = [];
+      var changed = false;
+      list.forEach(function (name) {
+        var parts = tags.splitIngredients(name);
+        if (parts.length !== 1 || parts[0] !== name) changed = true;
+        parts.forEach(function (p) { if (p && fixed.indexOf(p) === -1) fixed.push(p); });
+      });
+      if (fixed.length !== list.length) changed = true;
+      if (!changed) return false;
+      try { store.setPantry(fixed); } catch (e) { return false; }
+      return true;
+    }
+
+    /* 「我的材料」建议区：空输入给高频前 24 个，有输入就按关键词过滤 */
+    function pantrySuggestNames() {
+      var pool = tags.ingredientPool(store.allRecipes());
+      var kw = String(state.pantryDraft || '').trim();
+      if (!kw) return pool.slice(0, 24).map(function (it) { return it.name; });
+      // 可能是一行多个（朗姆酒 / 可），取最后一段当关键词，符合边打边筛的直觉
+      var parts = kw.split(/[\/、,;；\s]+/).filter(Boolean);
+      var word = parts.length ? parts[parts.length - 1] : kw;
+      // 允许输英文（vodka）或带单位（30毫升朗姆酒）：归一化后一起匹配
+      var keys = [word, tags.aliasOf(tags.ingredientName(word)) || word];
+      var hits = pool.filter(function (it) {
+        var n = it.name.toLowerCase();
+        for (var i = 0; i < keys.length; i++) {
+          var k = String(keys[i]).toLowerCase();
+          if (k && n.indexOf(k) !== -1) return true;
+        }
+        return false;
+      });
+      return hits.slice(0, 24).map(function (it) { return it.name; });
+    }
+
+    /* 酒柜页：我的材料 → 能做的酒 → 我的酒柜 → 喝过的酒 → 浏览历史入口 */
     function renderCabinet() {
       var ids = store.getCabinet();
       var cabinet = ids.map(function (id) { return store.findRecipe(id); }).filter(Boolean);
@@ -273,6 +374,7 @@
       view().innerHTML = ui.cabinetHtml({
         pantry: pantry,
         pantryDraft: state.pantryDraft,
+        pantrySuggest: pantrySuggestNames(),
         ready: groups.ready,
         near: groups.near,
         cabinet: cabinet,
@@ -281,12 +383,12 @@
       }, tags);
     }
 
-    /* 兑酒专区：主库里 id 以 cn- 开头的配方 */
-    function renderMixer() {
-      var list = store.allRecipes().filter(function (d) {
-        return String(d.id || '').indexOf('cn-') === 0;
-      });
-      view().innerHTML = ui.mixerHtml({ list: list }, tags);
+    /* 浏览历史（独立页面，从酒柜页底部的入口进来） */
+    function renderHistory() {
+      var history = store.getHistory().map(function (x) {
+        return { drink: store.findRecipe(x.id), at: x.at, stamp: core.formatStamp(x.at) };
+      }).filter(function (x) { return x.drink; });
+      view().innerHTML = ui.historyPageHtml(history, tags);
     }
 
     function renderDetail(id) {
@@ -306,7 +408,8 @@
 
     function recomputePool() {
       state.pool = core.buildBlindPool(store.allRecipes(), {
-        tierIds: state.blind.tierIds,
+        // 一个档位都没选 = 不限价格（core 里 [] 表示「没有一档符合」，所以这里传 null 跳过价格过滤）
+        tierIds: state.blind.tierIds.length ? state.blind.tierIds : null,
         tastes: state.blind.tastes,
         alcoholic: state.blind.alcoholic,
         customTiers: store.getPriceTiers()
@@ -335,16 +438,17 @@
       var page = state.route.page;
       doc.getElementById('pageTitle').textContent = PAGE_TITLE[page] || '推荐';
       var tabs = doc.querySelectorAll('.tab');
+      var hl = page === 'history' ? 'cabinet' : page;   // 历史页从酒柜进，高亮酒柜
       for (var i = 0; i < tabs.length; i++) {
         var t = tabs[i];
-        var act = t.getAttribute('data-tab') === page || (page === 'drink' && t.getAttribute('data-tab') === 'recommend');
+        var act = t.getAttribute('data-tab') === hl || (page === 'drink' && t.getAttribute('data-tab') === 'recommend');
         if (act) t.className = 'tab active';
         else t.className = 'tab';
       }
       if (page === 'recommend') renderRecommend();
       else if (page === 'cabinet') renderCabinet();
       else if (page === 'box') renderBox();
-      else if (page === 'mixer') renderMixer();
+      else if (page === 'history') renderHistory();
       else if (page === 'drink') renderDrink();
       renderOverlay();
       rendered = true;
@@ -360,6 +464,7 @@
       else if (kind === 'newRecipe') { ov.innerHTML = ui.addFormHtml(); bindRecipeImageInput(); }
       else if (kind === 'tiers') ov.innerHTML = ui.tiersHtml(state.tierDraft || tiers(), state.tierErr || '');
       else if (kind === 'about') ov.innerHTML = ui.aboutHtml();
+      else if (kind === 'confirm') ov.innerHTML = ui.confirmHtml(state.confirm || {});
       else if (kind === 'import') ov.innerHTML = ui.importHtml();
     }
 
@@ -391,6 +496,9 @@
       } else if (r.page !== 'drink') {
         // 切到酒柜 / 盲盒：放弃待恢复的滚动位置
         resetRecommendList();
+      } else if (r.id) {
+        // 进详情就记浏览历史：除了点卡片，直接打开或刷新详情页也要能记上
+        try { store.pushHistory(r.id, now()); } catch (e) { /* 记不上不影响浏览 */ }
       }
       // 进详情：保留 restoreScroll / scrollMemo，等返回时用
 
@@ -411,7 +519,9 @@
       return (r.q.q || '') === state.q
         && t.join(',') === state.tastes.join(',')
         && i.join(',') === state.ingredients.join(',')
-        && (r.q.strength || '') === state.strength;
+        && (r.q.strength || '') === state.strength
+        // 分区也要比：否则从货架点「全部 ›」会被当成 hash 回声跳过、页面不刷新
+        && (r.q.sec || '') === currentSec();
     }
 
     /* ---------- 备份 ---------- */
@@ -457,12 +567,15 @@
     function applyImport(text, mode) {
       try {
         var res = store.importBackup(text, mode);
+        // 旧备份里可能带着「整串」脏材料标签，导入后顺手迁移一次
+        var cleaned = migratePantry();
         resetRecommendList();
         closeOverlay();
         render();
+        var tail = cleaned ? '，材料标签已自动整理' : '';
         toast(mode === 'replace'
-          ? '已覆盖导入（' + res.cabinet + ' 瓶酒柜 / ' + res.custom + ' 自制）'
-          : '已合并导入（' + res.cabinet + ' 瓶酒柜 / ' + res.custom + ' 自制）');
+          ? '已覆盖导入（' + res.cabinet + ' 瓶酒柜 / ' + res.custom + ' 自制）' + tail
+          : '已合并导入（' + res.cabinet + ' 瓶酒柜 / ' + res.custom + ' 自制）' + tail);
         return { ok: true, result: res };
       } catch (e) {
         var errEl = doc.getElementById('importErr');
@@ -533,15 +646,20 @@
         return { ok: false, error: msg };
       }
       var clean = [];
+      var droppedEmpty = 0;
       for (var i = 0; i < draft.length; i++) {
         var t = draft[i];
         var label = String(t.label || '').trim();
-        if (!label) continue;
+        if (!label) { droppedEmpty++; continue; }
         var min = Number(t.min);
         var max = t.max === '' || t.max === null || t.max === undefined ? Infinity : Number(t.max);
         if (!isFinite(min)) min = 0;
         if (Number.isNaN(max)) max = Infinity;
         clean.push({ label: label, min: min, max: max });
+      }
+      // 有档位没填名称时不静默丢弃，明确提示，避免用户以为加成功了
+      if (droppedEmpty) {
+        return tierFail('有 ' + droppedEmpty + ' 个档位还没填名称，请补全或点 ✕ 删掉它');
       }
       if (clean.length < 1) return tierFail('至少保留一个档位');
       for (var j = 0; j < clean.length; j++) {
@@ -551,7 +669,7 @@
       }
       store.setPriceTiers(clean);
       state.tierErr = '';
-      state.blind.tierIds = tags.normalizeTiers(clean).map(function (t) { return t.id; });
+      state.blind.tierIds = [];   // 档位改了，旧的选中 id 已失效；默认回到「不限」
       state.blind.result = null;
       closeOverlay();
       render();
@@ -604,20 +722,36 @@
         case 'addPantry':
           addPantryFromDraft();
           break;
+        case 'addPantryName': {
+          // 建议区里点一下直接加
+          var nm = el.getAttribute('data-val');
+          var okAdd = false;
+          try { okAdd = store.addPantry(nm); } catch (e) { /* ignore */ }
+          state.pantryDraft = '';
+          renderCabinet();
+          toast(okAdd ? '已加入材料：' + nm : '这个材料已经在列表里了');
+          break;
+        }
         case 'delPantry':
           store.removePantry(el.getAttribute('data-val'));
           renderCabinet();
           break;
         case 'delHistory':
           store.removeHistory(el.getAttribute('data-val'));
-          renderCabinet();
+          render();
           break;
         case 'clearHistory':
-          if (win.confirm && win.confirm('清空全部浏览历史？')) {
-            store.clearHistory();
-            renderCabinet();
-            toast('浏览历史已清空');
-          }
+          openConfirm({
+            title: '清空浏览历史？',
+            text: '浏览历史会被全部删除，且无法恢复。',
+            okLabel: '清空',
+            danger: true,
+            run: function () {
+              store.clearHistory();
+              render();
+              toast('浏览历史已清空');
+            }
+          });
           break;
         case 'loadMore':
           appendBatch();
@@ -665,6 +799,22 @@
           break;
         case 'gotoRecommend':
           navigate('#/recommend');
+          break;
+        case 'moreSection': {
+          // 从货架点「全部 ›」进某个分区的完整列表
+          navigate(core.buildHash({ page: 'recommend', q: { sec: el.getAttribute('data-val') } }));
+          break;
+        }
+        case 'backShelf':
+          // 从分区列表回货架首页：顺手清掉筛选，保证落回首页形态
+          state.q = ''; state.tastes = []; state.ingredients = []; state.strength = '';
+          navigate('#/recommend');
+          break;
+        case 'gotoHistory':
+          navigate('#/history');
+          break;
+        case 'backToCabinet':
+          navigate('#/cabinet');
           break;
         case 'tier': {
           var tid = el.getAttribute('data-val');
@@ -749,24 +899,45 @@
           break;
         }
         case 'clearAll':
-          if (win.confirm && win.confirm('确定清空酒柜与自制配方吗？建议先导出备份。')) {
-            store.clearAll();
-            state.blind.result = null;
-            state.blind.tierIds = tiers().map(function (t) { return t.id; });
-            resetRecommendList();
-            closeOverlay();
-            render();
-            toast('已清空全部数据');
-          }
+          openConfirm({
+            title: '清空全部数据？',
+            text: '酒柜、自制配方、我的材料、评分和浏览历史都会被删除，且无法恢复。建议先导出备份。',
+            okLabel: '确定清空',
+            danger: true,
+            run: function () {
+              store.clearAll();
+              state.blind.result = null;
+              state.blind.tierIds = [];
+              resetRecommendList();
+              closeOverlay();
+              render();
+              toast('已清空全部数据');
+            }
+          });
           break;
         case 'delCustom':
-          if (win.confirm && win.confirm('删除这个自制配方？')) {
-            store.removeCustom(id);
-            resetRecommendList();
-            navigate('#/recommend');
-            render();
-            toast('已删除');
-          }
+          openConfirm({
+            title: '删除这个自制配方？',
+            text: '删除后无法恢复。',
+            okLabel: '删除',
+            danger: true,
+            run: function () {
+              store.removeCustom(id);
+              resetRecommendList();
+              navigate('#/recommend');
+              render();
+              toast('已删除');
+            }
+          });
+          break;
+        case 'confirmYes': {
+          var yes = state.confirm && state.confirm.run;
+          closeOverlay();
+          if (yes) yes();
+          break;
+        }
+        case 'confirmNo':
+          closeOverlay();
           break;
         default:
           break;
@@ -774,14 +945,15 @@
       return undefined;
     }
 
-    /* 提交「我的材料」输入框里的内容（回车 / 点＋时调用） */
+    /* 提交「我的材料」输入框里的内容（回车 / 点＋时调用）
+       支持一次填多个：朗姆酒 / 可乐 / 青柠汁；也认英文（vodka）与带单位写法 */
     function addPantryFromDraft() {
-      var raw = String(state.pantryDraft || '').trim();
-      if (!raw) return false;
-      var name = tags.ingredientName(raw);
-      if (!name) return false;
-      var added;
-      try { added = store.addPantry(name); } catch (e) { return false; }
+      var names = tags.splitIngredients(state.pantryDraft);
+      if (!names.length) return false;
+      var added = [];
+      names.forEach(function (n) {
+        try { if (store.addPantry(n)) added.push(n); } catch (e) { /* 单个失败不影响其余 */ }
+      });
       state.pantryDraft = '';
       renderCabinet();
       var inp = doc.getElementById('pantryInput');
@@ -791,8 +963,10 @@
           try { inp.setSelectionRange(0, 0); } catch (err) { /* 某些 input 类型不支持 */ }
         }
       }
-      if (added) toast('已加入材料：' + name);
-      return added;
+      if (added.length === 1) toast('已加入材料：' + added[0]);
+      else if (added.length > 1) toast('已加入 ' + added.length + ' 种材料');
+      else toast('这些材料已经在列表里了');
+      return added.length > 0;
     }
 
     /* 上传的自制配方照片：压缩成小尺寸 JPEG dataURL 存本地，避免撑爆 localStorage */
@@ -858,6 +1032,15 @@
       }
       doc.addEventListener('click', onDocClick);
 
+      // 点遮罩空白处关闭弹层（只有点在 .sheet 外面才算，弹层内部点哪都不关）
+      var ovEl = doc.getElementById('overlay');
+      if (ovEl && ovEl.addEventListener) {
+        ovEl.addEventListener('click', function (e) {
+          if (!state.overlay) return;
+          if (e.target === ovEl) closeOverlay();
+        });
+      }
+
       // 推荐页滑到底自动加载更多（滚动容器是 #view，元素本身不会被替换）
       var viewEl = doc.getElementById('view');
       if (viewEl && viewEl.addEventListener) {
@@ -868,9 +1051,11 @@
       doc.addEventListener('input', function (e) {
         var t = e.target;
         if (!t || !t.getAttribute) return;
-        // 「我的材料」输入框：打字阶段只记草稿，不重渲染（否则会丢焦点）
+        // 「我的材料」输入框：打字阶段只记草稿 + 局部刷新建议区，不整页重渲染（否则丢焦点）
         if (t.getAttribute('data-pantry-input') !== null) {
           state.pantryDraft = String(t.value || '');
+          var sg = doc.getElementById('pantrySuggest');
+          if (sg) sg.innerHTML = ui.pantrySuggestHtml(pantrySuggestNames(), state.pantryDraft);
           return;
         }
         var labelIdx = t.getAttribute('data-tier-label');
@@ -917,8 +1102,10 @@
     }
 
     function start() {
-      // 盲盒档位初始 = 全选
-      state.blind.tierIds = tiers().map(function (t) { return t.id; });
+      // 盲盒档位初始 = 不限（一个都不选）。点一下才是「只看这一档」，
+      // 和界面提示「点选一个或多个档位，不选=不限」保持一致。
+      state.blind.tierIds = [];
+      migratePantry();          // 先把历史遗留的脏材料标签（整串那种）拆干净
       bindEvents();
       if (!win.location.hash) win.location.hash = '#/recommend';
       onHashChange();

@@ -2,7 +2,7 @@
 (function (global) {
   'use strict';
 
-  var PAGES = ['recommend', 'cabinet', 'box', 'mixer'];
+  var PAGES = ['recommend', 'cabinet', 'box', 'history'];
 
   function parseHash(hash) {
     var h = String(hash || '').replace(/^#/, '');

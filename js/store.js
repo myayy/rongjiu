@@ -180,6 +180,18 @@
     api.clearPantry = function () {
       write(KEYS.pantry, []);
     };
+    /* 整体写回（迁移用）：去空、去重、只留字符串 */
+    api.setPantry = function (list) {
+      if (!Array.isArray(list)) throw new Error('材料列表非法');
+      var out = [];
+      for (var i = 0; i < list.length; i++) {
+        if (typeof list[i] !== 'string') continue;
+        var n = list[i].trim();
+        if (n && out.indexOf(n) === -1) out.push(n);
+      }
+      write(KEYS.pantry, out);
+      return out;
+    };
 
     /* ----- 星级评价（做过的酒） ----- */
     function cleanRating(n) {

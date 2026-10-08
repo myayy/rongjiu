@@ -20,11 +20,12 @@ test('路由：空 hash 默认推荐页', () => {
   assert.deepEqual(Core.parseHash('#/nonsense'), Core.parseHash(''));
 });
 
-test('路由：四个 Tab 与详情页', () => {
-  for (const p of ['recommend', 'cabinet', 'box', 'mixer']) {
+test('路由：三个 Tab + 浏览历史页与详情页', () => {
+  for (const p of ['recommend', 'cabinet', 'box', 'history']) {
     assert.equal(Core.parseHash('#/' + p).page, p);
   }
-  assert.equal(Core.buildHash({ page: 'mixer', q: {} }), '#/mixer');
+  assert.equal(Core.buildHash({ page: 'history', q: {} }), '#/history');
+  assert.equal(Core.parseHash('#/recommend?sec=vodka').q.sec, 'vodka', '分区参数应能解析');
   const d = Core.parseHash('#/drink/tcdb-11000');
   assert.equal(d.page, 'drink');
   assert.equal(d.id, 'tcdb-11000');

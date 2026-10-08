@@ -14,9 +14,9 @@ test('js/data.js 存在且可加载', () => {
   assert.ok(Array.isArray(globalThis.DRINKS), 'globalThis.DRINKS 应为数组');
 });
 
-test('配方总数为 1431（1395 主库 + 36 条兑酒）', () => {
+test('配方总数为 1341（跨源同名去重后）', () => {
   require(path.join(ROOT, 'js', 'data.js'));
-  assert.equal(globalThis.DRINKS.length, 1431);
+  assert.equal(globalThis.DRINKS.length, 1341);
 });
 
 test('每条配方字段完整', () => {
@@ -50,7 +50,7 @@ test('图片路径均指向真实文件', () => {
       `${d.id} 图片不存在: ${d.image}`
     );
   }
-  assert.ok(withImage >= 1394, `带图配方应 >=1394，实际 ${withImage}`);
+  assert.ok(withImage >= 1340, `带图配方应 >=1340，实际 ${withImage}`);
 });
 
 test('双击打开的 index.html 引用的所有本地资源路径合法', () => {
