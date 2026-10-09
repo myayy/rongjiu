@@ -101,7 +101,7 @@ test('盲盒页渲染档位/口感/酒精度与结果区', () => {
   const pool = Core.buildBlindPool(DRINKS, { tierIds: [], tastes: [] }, Tags);
   const html = UI.blindHtml({ pool, tierIds: ['t0', 't1'], tastes: ['甜'], alcoholic: '' }, tiers, Tags);
   assert.ok(html.includes('价格档位'));
-  assert.ok(html.includes('可自定义'));
+  assert.ok(html.includes('编辑价格档位'));
   assert.ok(html.includes('咖啡'));
   assert.ok(html.includes('符合条件：' + pool.length + ' 款'));
   assert.ok(html.includes('data-act="blindDraw"'));

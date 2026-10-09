@@ -91,8 +91,22 @@
     return false;
   }
 
+  /* 精确匹配：把查询串（忽略空白/大小写）作为一个完整词，只在「酒名」里整串包含才算命中。
+     过滤掉逐字 OR 捞进来的长尾（如搜「金」不再全库泛「金」）。 */
+  function matchesQueryExact(drink, q) {
+    var raw = String(q || '').replace(/\s+/g, '').toLowerCase();
+    if (!raw) return true;
+    var name = String(drink.name_display || drink.name_zh || drink.name || '')
+      .replace(/\s+/g, '').toLowerCase();
+    return name.indexOf(raw) !== -1;
+  }
+
   function matchesFilters(drink, filters, tagsApi) {
-    if (filters.q && !matchesQuery(drink, filters.q)) return false;
+    if (filters.q) {
+      if (filters.exact) {
+        if (!matchesQueryExact(drink, filters.q)) return false;
+      } else if (!matchesQuery(drink, filters.q)) return false;
+    }
     if (filters.alcoholic) {
       var a = String(drink.alcoholic || '');
       if (filters.alcoholic === 'yes' && a !== 'Alcoholic') return false;
@@ -187,6 +201,7 @@
     formatStamp: formatStamp,
     queryTokens: queryTokens,
     matchesQuery: matchesQuery,
+    matchesQueryExact: matchesQueryExact,
     filterRecipes: filterRecipes,
     uniqueCategories: uniqueCategories,
     shuffle: shuffle,

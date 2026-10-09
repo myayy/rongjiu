@@ -6,7 +6,7 @@
    注意：Service Worker 只在 https 或 localhost 下生效，双击 index.html（file://）不会注册。 */
 'use strict';
 
-var VERSION = 'rongjiu-v1';
+var VERSION = 'rongjiu-v3';
 var SHELL_CACHE = VERSION + '-shell';
 var IMG_CACHE = VERSION + '-img';
 var IMG_LIMIT = 240;   // 最多留 240 张配方图，超了就丢最早的，避免无限膨胀

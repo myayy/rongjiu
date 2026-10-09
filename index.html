@@ -49,5 +49,25 @@ if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   });
 }
 </script>
+<script>
+/* 安卓返回键（物理键 / 返回手势）。
+   打包成 APK 时 Capacitor 的 Activity 没接管返回键，默认一按就整个应用退出。
+   这里接过来先走应用内回退：关弹层 → 退一层页面 → 确实没得退了才退出应用。
+   浏览器 / PWA 下 Capacitor 不存在，这段直接跳过，用系统自带的前进后退即可。 */
+(function () {
+  var Cap = window.Capacitor;
+  if (!Cap || !Cap.isNativePlatform || !Cap.isNativePlatform()) return;
+  var App = null;
+  try { App = Cap.registerPlugin('App'); } catch (e) { return; }
+  if (!App || !App.addListener) return;
+  App.addListener('backButton', function () {
+    var app = window.__rj;                                  // app.js 启动时挂上来的实例
+    var where = (app && app.back) ? app.back() : 'exit';
+    if (where === 'exit') {
+      try { App.exitApp(); } catch (e) { /* 退不了就留在原地 */ }
+    }
+  });
+})();
+</script>
 </body>
 </html>

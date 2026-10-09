@@ -12,6 +12,18 @@
   --radius: 14px;
 }
 
+/* 暗色主题：跟随系统或设置里的「暗色模式」切换 */
+[data-theme="dark"]:root {
+  --bg: #1c1a17;
+  --card: #2a2621;
+  --ink: #eceae4;
+  --muted: #a29a8c;
+  --line: #3a352e;
+  --accent: #d98a4a;
+  --accent-soft: #3b2c1f;
+  --shadow: 0 2px 10px rgba(0, 0, 0, .4);
+}
+
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 html, body {
@@ -123,6 +135,9 @@ html, body {
 
 /* ---- 筛选条 ---- */
 .filterbar { margin-bottom: 10px; }
+/* 货架首页只露搜索框，进列表形态（有搜索词/筛选）才展开全部筛选胶囊。
+   两种形态共用同一段 DOM，这样打字时不用重建搜索框。 */
+.filter-host.bar-min .fgroup { display: none; }
 .search {
   width: 100%; padding: 9px 12px; border-radius: 12px;
   border: 1px solid var(--line); background: var(--card);
@@ -378,3 +393,64 @@ html, body {
 }
 .toast.hidden { display: none; }
 .hidden { display: none !important; }
+
+/* ---- 能做的酒：规则说明 ---- */
+.rulenote { font-size: 11px; color: var(--muted); margin: 2px 0 8px; line-height: 1.5; }
+
+/* ---- 搜索：精确匹配开关 ---- */
+.exact-toggle {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px;
+  border: 1px solid var(--line); background: var(--card); color: var(--muted);
+  border-radius: 10px; padding: 6px 9px; font-size: 12px; cursor: pointer; white-space: nowrap;
+}
+.exact-toggle .exact-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.exact-toggle.on { border-color: var(--accent); color: var(--accent); }
+.exact-toggle.on .exact-dot { background: var(--accent); }
+
+/* ---- 搜索历史 ---- */
+.hist-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.hist-label { font-size: 11px; color: var(--muted); }
+.hist-clear { font-size: 11px; color: var(--muted); background: none; border: none; cursor: pointer; padding: 0; margin-left: auto; }
+.hist-clear:active { color: var(--accent); }
+
+/* ---- 基酒总览 ---- */
+.spirit-list { display: flex; flex-direction: column; gap: 8px; }
+.spirit-item {
+  display: flex; align-items: center; gap: 8px; padding: 14px 14px;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  cursor: pointer; text-align: left;
+}
+.spirit-name { font-size: 15px; font-weight: 700; color: var(--ink); }
+.spirit-count { font-size: 12px; color: var(--muted); margin-left: auto; }
+
+/* ---- 酒柜：搜索 + 分组 ---- */
+.cab-tool { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+.cab-tool .seg { display: flex; }
+.seg .seg-btn {
+  flex: 1 1 0; border: 1px solid var(--line); background: var(--card); color: var(--muted);
+  padding: 6px 0; font-size: 12px; cursor: pointer;
+}
+.seg .seg-btn + .seg-btn { border-left: none; }
+.seg .seg-btn:first-child { border-radius: 8px 0 0 8px; }
+.seg .seg-btn:last-child { border-radius: 0 8px 8px 0; }
+.seg .seg-btn.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+
+/* ---- 自制配方编辑入口 ---- */
+.card-edit {
+  position: absolute; top: 8px; right: 8px; z-index: 2;
+  width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--card); color: var(--accent); cursor: pointer; font-size: 15px;
+}
+.card { position: relative; }
+.shelf-imgbox { position: relative; overflow: hidden; }
+
+/* ---- 详情页返回/分享 ---- */
+.back-btn { margin-bottom: 8px; background: none; border: none; color: var(--accent); font-size: 14px; cursor: pointer; }
+.share-btn {
+  position: relative; top: -78px; float: right; z-index: 3;
+  width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 50%;
+  background: var(--card); color: var(--accent); cursor: pointer; font-size: 15px;
+}
+
+/* ---- 盲盒/弹层小链接按钮 ---- */
+.link-btn { background: none; border: none; color: var(--accent); font-size: 12px; margin-top: 8px; cursor: pointer; padding: 0; }

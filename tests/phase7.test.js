@@ -35,10 +35,18 @@ test('index.html 引入顺序正确且资源全部存在', () => {
   assert.ok(html.includes('id="view"') && html.includes('class="tabbar"'), '缺少视图容器/导航');
 });
 
-test('不落 C 盘：项目内无 node_modules/package.json/构建产物', () => {
-  for (const bad of ['node_modules', 'package.json', 'package-lock.json', 'dist', 'build', '.cache']) {
-    assert.ok(!fs.existsSync(path.join(ROOT, bad)), `不应存在 ${bad}（零依赖约束）`);
+test('不落 C 盘：无构建产物残留；打包脚手架（package.json/node_modules）都被 gitignore', () => {
+  // 跑 App 本身依旧零依赖（双击 index.html 就行）。package.json / node_modules
+  // 只是「打成安卓 APK」时用到的脚手架，必须留在项目目录内且不进仓库。
+  for (const bad of ['dist', 'build', '.cache']) {
+    assert.ok(!fs.existsSync(path.join(ROOT, bad)), `不应存在 ${bad}`);
   }
+  const ignores = fs.readFileSync(path.join(ROOT, '.gitignore'), 'utf8');
+  for (const rule of ['node_modules/', 'www/', 'android/']) {
+    assert.ok(ignores.includes(rule), `.gitignore 应忽略 ${rule}`);
+  }
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  assert.ok(!html.includes('node_modules'), 'index.html 不该引用 node_modules');
 });
 
 test('数据文件体积合理且含全部配方', () => {

@@ -310,11 +310,10 @@ test('盲盒默认不限档位（不选=不限），展示可选口感', () => {
   const app = makeApp();
   go(app, '#/box');
   assert.equal(app._env.doc.getElementById('pageTitle').textContent, '盲盒');
-  assert.equal(app.state.blind.tierIds.length, 0);
+  assert.equal(app.state.blind.tierIds, null, '默认全选（未动过）');
   const html = app._env.doc.getElementById('view').innerHTML;
   assert.ok(html.includes('价格档位'));
-  assert.ok(html.includes('可自定义'));
-  assert.ok(html.includes('不选=不限'), '提示语要说明「不选=不限」');
+  assert.ok(html.includes('取消勾选的档位不会参与抽取'), '提示语要走「取消勾选=排除」');
   assert.ok(html.includes('符合条件：' + DRINKS.length + ' 款'));
   for (const t of Tags.ALL_TASTE_TAGS) assert.ok(html.includes(t), '缺口感 ' + t);
 });
@@ -341,30 +340,30 @@ test('盲盒抽一瓶并支持再来一次（结果不同）', () => {
 });
 
 test('盲盒点选档位收窄池子，全部取消后回到不限', () => {
+  // 默认全部勾选：池子等于全库（价格都在档位范围内）
   const app = makeApp();
   go(app, '#/box');
   const full = app.state.pool.length;
   assert.equal(full, DRINKS.length);
 
-  // 点一下「30元内」：只剩这一档（以前是「取消」它，与提示相反）
+  // 点一下「30元内」：从「全选」里取消它 → 只看 30 以上的
   const ids = Tags.normalizeTiers(app._store.getPriceTiers()).map((t) => t.id);
   click(app._env.doc, { 'data-act': 'tier', 'data-val': ids[0] });
-  assert.deepEqual(app.state.blind.tierIds, [ids[0]]);
+  assert.deepEqual(app.state.blind.tierIds, ids.slice(1));
   const one = app.state.pool.length;
-  assert.ok(one < full, '只选一档应该比不限少');
+  assert.ok(one < full, '取消一档后池子应变小');
 
-  // 再点一档：并集，池子不会更小
+  // 再点「30–80元」：也从全选里取消 → 只看得更高这档，池子更小
   click(app._env.doc, { 'data-act': 'tier', 'data-val': ids[1] });
-  assert.equal(app.state.blind.tierIds.length, 2);
-  assert.ok(app.state.pool.length >= one);
+  assert.deepEqual(app.state.blind.tierIds, ids.slice(2));
+  assert.ok(app.state.pool.length <= one, '取消更多档位池子不会变大');
   const html = app._env.doc.getElementById('view').innerHTML;
   assert.ok(html.includes('符合条件：' + app.state.pool.length + ' 款'));
 
-  // 全部取消 = 不限
-  click(app._env.doc, { 'data-act': 'tier', 'data-val': ids[0] });
-  click(app._env.doc, { 'data-act': 'tier', 'data-val': ids[1] });
-  assert.equal(app.state.blind.tierIds.length, 0);
-  assert.equal(app.state.pool.length, full);
+  // 把最后这档也取消 = 什么都不剩（等同不限价格）
+  click(app._env.doc, { 'data-act': 'tier', 'data-val': ids[2] });
+  assert.deepEqual(app.state.blind.tierIds, []);
+  assert.equal(app.state.pool.length, full, '全部取消 = 不限价格');
 
   // 选一个口感
   click(app._env.doc, { 'data-act': 'taste', 'data-val': '甜' });
@@ -386,12 +385,10 @@ test('盲盒结果可直接加入酒柜', () => {
 });
 
 test('盲盒条件无匹配时给出提示且按钮禁用', () => {
-  // 造一个永远匹配不到任何酒的档位（价格区间远高于估算价）
+  // 造一个永远匹配不到任何酒的档位（价格区间远高于估算价），默认全选这一个档
   const app = makeApp({ tiers: [{ label: '天价档', min: 200000, max: 300000 }] });
   go(app, '#/box');
-  const ids = Tags.normalizeTiers(app._store.getPriceTiers()).map((t) => t.id);
-  click(app._env.doc, { 'data-act': 'tier', 'data-val': ids[0] });
-  assert.equal(app.state.pool.length, 0);
+  assert.equal(app.state.pool.length, 0, '该档位内没有符合价格的酒');
   const html = app._env.doc.getElementById('view').innerHTML;
   assert.ok(html.includes('放宽'));
   assert.ok(html.includes('disabled'));
@@ -406,11 +403,12 @@ test('盲盒自定义档位（用户改过的）生效', () => {
     { label: '土豪', min: 20, max: 99999 }
   ] });
   go(app, '#/box');
-  assert.equal(app.state.blind.tierIds.length, 0);
+  assert.equal(app.state.blind.tierIds, null, '默认全选（未动过）');
   const html = app._env.doc.getElementById('view').innerHTML;
   assert.ok(html.includes('超便宜'));
   assert.ok(html.includes('土豪'));
   assert.ok(!html.includes('30元内'), '默认档位应被自定义档位替换');
+  assert.ok(app.state.pool.length === DRINKS.length, '默认全选 → 池子为全库');
   for (const d of app.state.pool) {
     assert.ok(Tags.estimatePrice(d) < 99999);
   }
@@ -513,9 +511,9 @@ test('价格档位编辑：增删改校验并保存', () => {
   assert.equal(app.tiers()[3].max, Infinity, '读取时还原为不限');
   assert.ok(Tags.tierOf(99999, app.tiers()), '99999 元仍落在顶级档');
 
-  // 档位变化后盲盒立即使用新档位，且选中状态回到「不限」（旧 id 已失效）
+  // 档位变化后盲盒立即使用新档位，且选中状态回到「默认全选」（旧 id 已失效）
   go(app, '#/box');
-  assert.equal(app.state.blind.tierIds.length, 0);
+  assert.equal(app.state.blind.tierIds, null, '默认回到全选（未动过）');
   assert.ok(app._env.doc.getElementById('view').innerHTML.includes('特便宜'));
 });
 

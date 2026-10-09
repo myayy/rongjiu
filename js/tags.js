@@ -167,14 +167,32 @@
     return need;
   }
 
+  /* 配方里有没有至少一样是「我手上有的」材料（冰/水不算） */
+  function usedAny(drink, have) {
+    var names = ingredientNames(drink);
+    for (var i = 0; i < names.length; i++) {
+      if (ING_STOP[names[i]]) continue;
+      for (var j = 0; j < have.length; j++) {
+        if (ingMatches(names[i], have[j])) return true;
+      }
+    }
+    return false;
+  }
+
   function pantryGroups(list, pantry) {
+    var have = (pantry || []).filter(function (n) { return typeof n === 'string' && n; });
     var ready = [];
     var near = [];
     (list || []).forEach(function (d) {
-      var miss = pantryMissing(d, pantry);
+      var miss = pantryMissing(d, have);
       if (miss === null) return;
-      if (miss.length === 0) ready.push({ drink: d, missing: null });
-      else if (miss.length === 1) near.push({ drink: d, missing: miss[0] });
+      if (miss.length === 0) { ready.push({ drink: d, missing: null }); return; }
+      if (miss.length !== 1) return;
+      // 「还差 1 样」必须建立在「它要的材料里我已经有了一样」之上。
+      // 否则只用一样材料的配方（纯威士忌一口饮之类）会把整组占满：
+      // 用户随便录个冰红茶，看到的全是跟自己材料毫无关系的酒。
+      if (!usedAny(d, have)) return;
+      near.push({ drink: d, missing: miss[0] });
     });
     return { ready: ready, near: near };
   }
@@ -434,6 +452,41 @@
     return null;
   }
 
+  /* ----- 按基酒的独立视图（不受互斥分区限制） ----- */
+  var SPIRITS = [
+    { id: 'vodka', label: '伏特加', zh: ['伏特加'], en: /\bvodka\b/i },
+    { id: 'gin', label: '金酒', zh: ['金酒', '杜松子酒'], en: /\bgin\b/i },
+    { id: 'rum', label: '朗姆酒', zh: ['朗姆'], en: /\brum\b/i },
+    { id: 'whisky', label: '威士忌', zh: ['威士忌', '波本'], en: /\bwhisk|\bbourbon\b|\bscotch\b|\brye\b/i },
+    { id: 'tequila', label: '龙舌兰', zh: ['龙舌兰'], en: /\btequila\b|\bmezcal\b/i },
+    { id: 'brandy', label: '白兰地', zh: ['白兰地', '干邑'], en: /\bbrandy\b|\bcognac\b/i },
+    { id: 'soju', label: '烧酒', zh: ['烧酒', '清酒'], en: /\bsoju\b|\bsake\b|\baguardiente\b/i },
+    { id: 'liqueur', label: '利口酒', zh: ['利口酒', '君度', '金巴利', '阿佩罗', '甘露', '野格'], en: /\bliqueur\b|\bcampari\b|\baperol\b|\bkahlua\b|\bjagemmeister\b|\bamaretto\b/i }
+  ];
+
+  /* 某条配方用到哪些基酒（按含料判断） */
+  function spiritIdsOf(drink) {
+    var out = [];
+    for (var i = 0; i < SPIRITS.length; i++) {
+      var s = SPIRITS[i];
+      if (ingHasZh(drink, s.zh) || (s.en ? ingHasEn(drink, s.en) : false)) out.push(s.id);
+    }
+    return out;
+  }
+
+  /* 全库按基酒分组：只在用到该基酒的配方里分类，不互斥（一款酒可出现在多个基酒下） */
+  function groupBySpirit(list) {
+    return SPIRITS.map(function (s) {
+      var drinks = (list || []).filter(function (d) { return spiritIdsOf(d).indexOf(s.id) !== -1; });
+      return { id: s.id, label: s.label, drinks: drinks };
+    });
+  }
+
+  function spiritById(id) {
+    for (var i = 0; i < SPIRITS.length; i++) if (SPIRITS[i].id === id) return SPIRITS[i];
+    return null;
+  }
+
   function priceInTier(price, tier) {
     return price >= tier.min && price < tier.max;
   }
@@ -472,6 +525,10 @@
     groupSections: groupSections,
     sectionOf: sectionOf,
     sectionById: sectionById,
+    SPIRITS: SPIRITS,
+    spiritIdsOf: spiritIdsOf,
+    groupBySpirit: groupBySpirit,
+    spiritById: spiritById,
     defaultTiers: defaultTiers,
     normalizeTiers: normalizeTiers,
     priceInTier: priceInTier,

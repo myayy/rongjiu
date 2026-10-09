@@ -72,8 +72,13 @@
       '<div class="card-actions"><button class="heart' + (inCab ? ' on' : '') + '" data-act="toggle" data-id="'
       + esc(drink.id) + '">' + (inCab ? '✓ 已在酒柜' : '＋ 加入酒柜') + '</button></div>';
 
+    var edit = isCustom(drink)
+      ? '<button class="card-edit" data-act="editCustom" data-id="' + esc(drink.id) + '" title="编辑这条自制配方" aria-label="编辑">✎</button>'
+      : '';
+
     return '<div class="card" data-act="open" data-id="' + esc(drink.id) + '">'
       + imageHtml(drink, 'card-img')
+      + edit
       + '<div class="card-body"><div class="card-title">' + esc(drink.name_display) + '</div>'
       + '<div class="card-meta">' + chips + '</div>' + heart
       + '</div></div>';
@@ -88,8 +93,11 @@
   function shelfCardHtml(drink, tagsApi) {
     var alc = tagsApi.alcoholLabel(drink.alcoholic);
     var price = priceOf(drink, tagsApi);
+    var edit = isCustom(drink)
+      ? '<button class="card-edit" data-act="editCustom" data-id="' + esc(drink.id) + '" title="编辑这条自制配方" aria-label="编辑">✎</button>'
+      : '';
     return '<div class="shelf-card" data-act="open" data-id="' + esc(drink.id) + '">'
-      + '<div class="shelf-imgbox">' + imageHtml(drink, 'shelf-img') + '</div>'
+      + '<div class="shelf-imgbox">' + imageHtml(drink, 'shelf-img') + edit + '</div>'
       + '<div class="shelf-name">' + esc(drink.name_display) + '</div>'
       + '<div class="shelf-meta">' + esc(alc || '') + (alc ? ' · ' : '') + price + '元</div>'
       + '</div>';
@@ -154,12 +162,13 @@
       : '<button class="btn" data-act="toggle" data-id="' + esc(drink.id) + '">＋ 加入酒柜</button>';
 
     return '<button class="back-btn" data-act="back">← 返回</button>'
+      + '<button class="share-btn" data-act="share" data-id="' + esc(drink.id) + '" title="分享这个配方" aria-label="分享">↗</button>'
       + '<div class="detail-hero">' + imageHtml(drink, 'detail-img') + '</div>'
-      + '<div class="detail-name">' + esc(drink.name_display) + '</div>'
       + '<div class="kv">' + kv + '</div>'
       + '<div class="btn-row">' + cabBtn
       + (isCustom(drink)
-        ? '<button class="btn danger" data-act="delCustom" data-id="' + esc(drink.id) + '">删除</button>'
+        ? '<button class="btn" data-act="editCustom" data-id="' + esc(drink.id) + '">✎ 编辑</button>'
+          + '<button class="btn danger" data-act="delCustom" data-id="' + esc(drink.id) + '">删除</button>'
         : '')
       + '</div>'
       + '<div class="detail-section"><h3>配料</h3><ul>' + (ings || '<li>未填写</li>') + '</ul></div>'
@@ -192,9 +201,14 @@
       return '<button class="fchip' + (on ? ' on' : '') + '" data-act="fStr" data-val="' + esc(s.id) + '">' + esc(s.label) + '</button>';
     }).join('');
 
+    var exactBtn = '<button class="exact-toggle' + (state.exact ? ' on' : '') + '" data-act="toggleExact" data-val="' + (state.exact ? '0' : '1') + '"'
+      + ' title="精确匹配：只按酒名整串查找" aria-label="切换精确匹配">'
+      + '<span class="exact-dot"></span>' + (state.exact ? '精确' : '模糊') + '</button>';
+
     return '<div class="filterbar">'
       + '<div class="search-row">'
       + '<input class="search" type="text" id="searchInput" placeholder="搜酒名 / 配料（任一字命中，直接输入材料即可筛）" value="' + esc(state.q || '') + '">'
+      + exactBtn
       + '<button class="icon-btn refresh" data-act="refreshList" title="换一批" aria-label="换一批">🔄</button>'
       + '</div>'
       + filterGroup('口味', tasteChips)
@@ -203,13 +217,16 @@
       + '</div>';
   }
 
-  /* 只要搜索框（分区首页用，不带筛选条） */
-  function searchOnlyHtml(q) {
-    return '<div class="filterbar">'
-      + '<div class="search-row">'
-      + '<input class="search" type="text" id="searchInput" placeholder="搜酒名 / 配料（任一字命中，直接输入材料即可筛）" value="' + esc(q || '') + '">'
-      + '<button class="icon-btn refresh" data-act="refreshList" title="换一批" aria-label="换一批">🔄</button>'
-      + '</div></div>';
+  /* 搜索历史胶囊：有词就点一下直接搜 */
+  function searchHistoryHtml(items) {
+    if (!items || !items.length) return '';
+    return '<div id="searchHistory" class="hist-row">'
+      + '<span class="hist-label">最近搜索</span>'
+      + items.map(function (q) {
+        return '<button class="fchip" data-act="searchHist" data-val="' + esc(q) + '">' + esc(q) + '</button>';
+      }).join('')
+      + '<button class="hist-clear" data-act="clearSearchHist" title="清空搜索历史">清空</button>'
+      + '</div>';
   }
 
   /* ---- 列表底部：加载更多 / 已到底 ---- */
@@ -269,28 +286,66 @@
       + (items.length > limit ? '<div class="more-hint">仅显示前 ' + limit + ' 款，共 ' + items.length + ' 款</div>' : '');
   }
 
-  function makeableHtml(ready, near, tagsApi) {
-    if (!ready.length && !near.length) return '';
-    return '<div class="box-panel"><h3>能做的酒</h3>'
-      + makeableGroupHtml('材料齐全', ready, tagsApi)
+  function makeableHtml(ready, near, tagsApi, pantry) {
+    var have = (pantry || []).join('、');
+    var head = '<div class="box-panel"><h3>能做的酒</h3>'
+      + '<p class="rulenote">仅展示「材料齐全」或只差 1 样材料的配方；缺 2 样及以上的不会在此显示</p>';
+    // 一款都做不了时要说清楚，否则用户会以为点了「＋」没反应
+    if (!ready.length && !near.length) {
+      return head
+        + '<p class="hint">按「' + esc(have) + '」暂时没有能做的酒。'
+        + '这里只列「材料齐全」和「还差 1 样」的配方，差 2 样以上的不会出现；'
+        + '再补几样基酒 / 糖浆 / 柠檬汁之类，结果就有了。</p></div>';
+    }
+    return head
+      + (ready.length
+        ? makeableGroupHtml('材料齐全', ready, tagsApi)
+        : '<div class="fgroup-label">材料齐全（0）</div>'
+          + '<p class="hint">手上的材料还凑不齐任何一款，先看下面「还差 1 样」的。</p>')
       + makeableGroupHtml('还差 1 样', near, tagsApi)
       + '</div>';
   }
 
-  /* ---- 我的酒柜 ---- */
-  function cabinetListHtml(items, tagsApi) {
+  /* ---- 我的酒柜（支持搜索 + 按基酒分组 / 按收藏时间） ---- */
+  function cabinetListHtml(items, tagsApi, opts) {
+    opts = opts || {};
+    var q = opts.q || '';
+    var toolbar = '<div class="cab-tool">'
+      + '<input class="search" type="text" id="cabinetQ" data-cabinet-q="1"'
+      + ' placeholder="在酒柜里搜酒名 / 配料" value="' + esc(q) + '">'
+      + '<div class="seg">'
+      + '<button class="seg-btn' + (opts.mode === 'spirit' ? '' : ' on') + '" data-act="cabMode" data-val="time">按收藏时间</button>'
+      + '<button class="seg-btn' + (opts.mode === 'spirit' ? ' on' : '') + '" data-act="cabMode" data-val="spirit">按基酒分组</button>'
+      + '</div></div>';
     if (!items.length) {
-      return '<div class="box-panel"><h3>我的酒柜</h3>'
+      return '<div class="box-panel"><h3>我的酒柜</h3>' + toolbar
         + emptyHtml({
           ico: '🗄',
-          text: '酒柜还空着。去推荐页或盲盒看到想喝的，点「加入酒柜」就存这儿了。',
+          text: q ? '酒柜里没有匹配「' + esc(q) + '」的配方' : '酒柜还空着。去推荐页或盲盒看到想喝的，点「加入酒柜」就存这儿了。',
           action: { act: 'gotoRecommend', label: '去逛逛' }
         })
         + '</div>';
     }
-    return '<div class="box-panel"><h3>我的酒柜（' + items.length + ' 瓶）</h3>'
-      + items.map(function (d) { return cardHtml(d, { inCabinet: true }, tagsApi); }).join('')
-      + '</div>';
+    var body;
+    if (opts.mode === 'spirit') {
+      // 按基酒分组：一款酒可能同时属多个基酒，用它在配方里命中的基酒名做小标题
+      var groups = {};
+      items.forEach(function (d) {
+        var sps = tagsApi.spiritIdsOf(d);
+        var label = sps.length ? tagsApi.SPIRITS.map(function (s) {
+          return sps.indexOf(s.id) !== -1 ? s.label : null;
+        }).filter(Boolean).join(' / ') : '未含基酒';
+        (groups[label] = groups[label] || []).push(d);
+      });
+      var keys = Object.keys(groups).sort(function (a, b) { return a.localeCompare(b, 'zh'); });
+      body = keys.map(function (k) {
+        return '<div class="fgroup-label">' + esc(k) + '（' + groups[k].length + '）</div>'
+          + groups[k].map(function (d) { return cardHtml(d, { inCabinet: true }, tagsApi); }).join('');
+      }).join('');
+    } else {
+      body = items.map(function (d) { return cardHtml(d, { inCabinet: true }, tagsApi); }).join('');
+    }
+    return '<div class="box-panel"><h3>我的酒柜（' + items.length + ' 瓶）</h3>' + toolbar + body + '</div>';
   }
 
   /* ---- 喝过的酒（按星级降序） ---- */
@@ -353,8 +408,10 @@
   function cabinetHtml(state, tagsApi) {
     var pantry = state.pantry || [];
     return pantryPanelHtml(pantry, state.pantryDraft, state.pantrySuggest)
-      + (pantry.length ? makeableHtml(state.ready || [], state.near || [], tagsApi) : '')
-      + cabinetListHtml(state.cabinet || [], tagsApi)
+      + (pantry.length ? makeableHtml(state.ready || [], state.near || [], tagsApi, pantry) : '')
+      + cabinetListHtml(state.cabinet || [], tagsApi, {
+        q: state.cabinetQ || '', mode: state.cabinetMode || 'time'
+      })
       + ratedSectionHtml(state.rated || [], tagsApi)
       + historyEntryHtml(state.history || []);
   }
@@ -385,8 +442,11 @@
       result = emptyHtml({ ico: '🎁', text: pool.length ? '条件已就绪，点下面按钮抽一瓶' : '当前条件没有匹配的酒，试试放宽档位或口感' });
     }
 
-    return '<div class="box-panel"><h3>价格档位（可自定义）</h3><p class="hint">点选一个或多个档位，不选=不限</p>'
-      + '<div class="chips">' + tierChips + '</div></div>'
+    return '<div class="box-panel"><h3>价格档位</h3>'
+      + '<p class="hint">默认全部勾选；<b>取消勾选的档位不会参与抽取</b></p>'
+      + '<div class="chips">' + tierChips + '</div>'
+      + '<button class="link-btn" data-act="tiers">⚙ 编辑价格档位</button>'
+      + '</div>'
       + '<div class="box-panel"><h3>想要的口感</h3><p class="hint">命中任一所选标签即可入池</p>'
       + '<div class="chips">' + tasteChips + '</div></div>'
       + '<div class="box-panel"><h3>酒精</h3>'
@@ -396,37 +456,50 @@
       + '<div class="btn-row"><button class="btn" data-act="blindDraw" ' + (pool.length ? '' : 'disabled') + '>🎯 抽一瓶</button></div>';
   }
 
-  /* ---- 新增配方表单 ---- */
-  function addFormHtml() {
-    return '<div class="sheet"><h2>新增配方</h2><p class="sub">保存在本机浏览器，刷新不丢</p>'
+  /* ---- 新增 / 编辑配方表单（draft 存在时用于编辑回填） ---- */
+  function addFormHtml(draft) {
+    draft = draft || {};
+    var editing = !!draft.editId;
+    var d = draft._source || {};
+    var title = editing ? '编辑自制配方' : '新增配方';
+    var imgPreview = d.image
+      ? '<div id="fImgPreview" class="img-preview"><img src="' + esc(d.image) + '" alt="配方照片"></div>'
+      : '<div id="fImgPreview" class="img-preview"></div>';
+    return '<div class="sheet"><h2>' + title + '</h2><p class="sub">保存在本机浏览器，刷新不丢</p>'
       + '<div class="form">'
-      + '<label>名称 *</label><input type="text" id="fName" placeholder="例如：融酒特调">'
-      + '<label>分类</label><input type="text" id="fCategory" placeholder="例如：Cocktail / 自制">'
-      + '<label>是否含酒精</label><select id="fAlc"><option value="Alcoholic">含酒精</option><option value="Non alcoholic">无酒精</option></select>'
-      + '<label>杯型</label><input type="text" id="fGlass" placeholder="例如：Highball glass">'
-      + '<label>配料 *（每行一条）</label><textarea id="fIng" placeholder="45毫升伏特加&#10;15毫升柠檬汁"></textarea>'
-      + '<label>做法</label><textarea id="fStep" placeholder="摇匀，滤入杯中。"></textarea>'
+      + '<label>名称 *</label><input type="text" id="fName" placeholder="例如：融酒特调" value="' + esc(d.name_display || '') + '">'
+      + '<label>分类</label><input type="text" id="fCategory" placeholder="例如：Cocktail / 自制" value="' + esc(d.category || '') + '">'
+      + '<label>是否含酒精</label><select id="fAlc"><option value="Alcoholic"' + (d.alcoholic === 'Alcoholic' ? ' selected' : '') + '>含酒精</option>'
+      + '<option value="Non alcoholic"' + (d.alcoholic === 'Non alcoholic' ? ' selected' : '') + '>无酒精</option></select>'
+      + '<label>杯型</label><input type="text" id="fGlass" placeholder="例如：Highball glass" value="' + esc(d.glass || '') + '">'
+      + '<label>配料 *（每行一条）</label><textarea id="fIng" placeholder="45毫升伏特加&#10;15毫升柠檬汁">' + esc((d.ingredients_zh || []).join('\n')) + '</textarea>'
+      + '<label>做法</label><textarea id="fStep" placeholder="摇匀，滤入杯中。">' + esc(d.instructions_zh || '') + '</textarea>'
       + '<label>照片（可选）</label>'
       + '<div class="img-pick">'
       + '<input type="file" id="fImage" accept="image/*" data-recipe-img="1">'
-      + '<label class="img-pick-btn" for="fImage">＋ 选择照片</label>'
+      + '<label class="img-pick-btn" for="fImage">' + (d.image ? '更换照片' : '＋ 选择照片') + '</label>'
       + '<span class="img-pick-hint">自动压缩后存在本机</span>'
       + '</div>'
-      + '<div id="fImgPreview" class="img-preview"></div>'
+      + imgPreview
       + '<div class="err" id="fErr"></div>'
       + '<div class="btn-row"><button class="btn subtle" data-act="closeOverlay">取消</button>'
-      + '<button class="btn" data-act="saveRecipe">保存</button></div>'
+      + '<button class="btn" data-act="saveRecipe">' + (editing ? '保存修改' : '保存') + '</button></div>'
       + '</div></div>';
   }
 
   /* ---- 详情/盲盒结果复用按钮行 ---- */
   function settingsHtml(opts) {
     opts = opts || {};
+    var themeLabel = opts.theme === 'dark' ? '暗色' : '浅色';
+    var themeToggle = opts.theme !== undefined && opts.theme !== null
+      ? '<div class="menu-item" data-act="toggleTheme"><span>' + (opts.theme === 'dark' ? '🌙 暗色模式' : '☀️ 浅色模式') + '</span><span class="val">切换为' + (opts.theme === 'dark' ? '浅色' : '暗色') + '</span></div>'
+      : '';
     return '<div class="sheet"><h2>设置</h2><p class="sub">数据仅保存在本机浏览器</p>'
       + '<div class="menu-item" data-act="newRecipe"><span>＋ 新增配方</span><span class="val">自制入库</span></div>'
       + '<div class="menu-item" data-act="export"><span>⬇ 导出备份</span><span class="val">JSON 文件</span></div>'
       + '<div class="menu-item" data-act="import"><span>⬆ 导入备份</span><span class="val">合并 / 覆盖</span></div>'
       + '<div class="menu-item" data-act="tiers"><span>¥ 价格档位</span><span class="val">' + (opts.tierCount || 3) + ' 档 · 可自定义</span></div>'
+      + themeToggle
       + '<div class="menu-item" data-act="about"><span>ⓘ 关于</span><span class="val"></span></div>'
       + '<div class="menu-item danger" data-act="clearAll"><span>🗑 清空全部数据</span><span class="val">含酒柜 / 自制 / 材料 / 评分 / 历史</span></div>'
       + '<div class="btn-row"><button class="btn subtle" data-act="closeOverlay">关闭</button></div>'
@@ -480,6 +553,16 @@
       + '<div class="btn-row"><button class="btn subtle" data-act="closeOverlay">取消</button></div></div>';
   }
 
+  /* 分享弹层：文本复制 / 生成长图 */
+  function shareHtml(name) {
+    return '<div class="sheet"><h2>分享 · ' + esc(name) + '</h2><p class="sub">把这条配方发给朋友</p>'
+      + '<div class="btn-row">'
+      + '<button class="btn" data-act="shareText">📋 复制文本</button>'
+      + '<button class="btn" data-act="shareImage">🖼 生成卡片图</button>'
+      + '</div>'
+      + '<div class="btn-row"><button class="btn subtle" data-act="closeOverlay">取消</button></div></div>';
+  }
+
   var api = {
     esc: esc,
     imageHtml: imageHtml,
@@ -488,7 +571,7 @@
     emptyHtml: emptyHtml,
     detailHtml: detailHtml,
     filterBarHtml: filterBarHtml,
-    searchOnlyHtml: searchOnlyHtml,
+    searchHistoryHtml: searchHistoryHtml,
     listFooterHtml: listFooterHtml,
     rateStarsHtml: rateStarsHtml,
     pantryPanelHtml: pantryPanelHtml,
@@ -509,8 +592,69 @@
     tiersHtml: tiersHtml,
     aboutHtml: aboutHtml,
     confirmHtml: confirmHtml,
-    importHtml: importHtml
+    importHtml: importHtml,
+    shareHtml: shareHtml
   };
   globalThis.RJUI = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
+
+  /* 配方卡片生成长图（分享功能）。用 canvas 画一张竖版卡片，离线可用。
+     Node 测试 / 无 canvas 环境下返回 rejected Promise，由调用方捕获。 */
+  (function () {
+    function render(drink) {
+      return new Promise(function (resolve, reject) {
+        var can = globalThis.document && globalThis.document.createElement('canvas');
+        if (!can || !can.getContext) return reject(new Error('no canvas'));
+        var ctx = can.getContext('2d');
+        var W = 720, H = 1000;
+        can.width = W; can.height = H;
+        // 背景
+        ctx.fillStyle = '#faf3e6';
+        ctx.fillRect(0, 0, W, H);
+        // 标题
+        ctx.fillStyle = '#3a2e22';
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 42px sans-serif';
+        ctx.fillText(drink.name_display || drink.name_zh || '配方', W / 2, 80);
+        ctx.fillStyle = '#8a7358';
+        ctx.font = '26px sans-serif';
+        ctx.fillText('配料', W / 2 - 250, 150);
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#3a2e22';
+        ctx.font = '28px sans-serif';
+        var y = 200;
+        (drink.ingredients_zh || ['未填写']).forEach(function (x) {
+          wrapText(ctx, x, 70, y, W - 140);
+          y += 46;
+        });
+        y += 30;
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#8a7358';
+        ctx.font = '26px sans-serif';
+        ctx.fillText('做法', 70, y);
+        ctx.fillStyle = '#3a2e22';
+        ctx.font = '28px sans-serif';
+        y += 46;
+        wrapText(ctx, drink.instructions_zh || '未填写', 70, y, W - 140);
+        resolve(can.toDataURL('image/png'));
+      });
+    }
+    function wrapText(ctx, text, x, y, maxWidth) {
+      var chars = String(text).split('');
+      var line = '';
+      for (var i = 0; i < chars.length; i++) {
+        var test = line + chars[i];
+        if (ctx.measureText(test).width > maxWidth && line) {
+          ctx.fillText(line, x, y);
+          line = chars[i];
+          y += 42;
+        } else {
+          line = test;
+        }
+      }
+      if (line) ctx.fillText(line, x, y);
+      return y;
+    }
+    globalThis.RJUICard = { render: render };
+  })();
 })(typeof window !== 'undefined' ? window : globalThis);

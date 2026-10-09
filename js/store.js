@@ -9,7 +9,11 @@
     seen: 'rj.blindSeen',
     pantry: 'rj.pantry',
     ratings: 'rj.ratings',
-    history: 'rj.history'
+    history: 'rj.history',
+    searchHistory: 'rj.searchHistory',
+    lastBackup: 'rj.lastBackup',
+    cabinetAt: 'rj.cabinetAt',
+    theme: 'rj.theme'
   };
 
   var SCHEMA = 1;
@@ -67,7 +71,7 @@
     api.addCabinet = function (id) {
       if (typeof id !== 'string' || !id) throw new Error('非法 id');
       var list = api.getCabinet();
-      if (list.indexOf(id) === -1) { list.push(id); write(KEYS.cabinet, list); return true; }
+      if (list.indexOf(id) === -1) { list.push(id); write(KEYS.cabinet, list); api.recordCabinetAt(id, Date.now()); return true; }
       return false;
     };
     api.removeCabinet = function (id) {
@@ -78,6 +82,15 @@
     };
     api.toggleCabinet = function (id) {
       return api.isInCabinet(id) ? (api.removeCabinet(id), false) : (api.addCabinet(id), true);
+    };
+    /* 收藏的时间戳（按收藏时间排序用）。新增时记录，历史遗留的取 0。 */
+    api.getCabinetAt = function (id) {
+      var m = read(KEYS.cabinetAt, {});
+      return (m && Object.prototype.hasOwnProperty.call(m, id)) ? Number(m[id]) || 0 : 0;
+    };
+    api.recordCabinetAt = function (id, ts) {
+      var m = read(KEYS.cabinetAt, {}) || {};
+      if (!Object.prototype.hasOwnProperty.call(m, id)) { m[id] = ts; write(KEYS.cabinetAt, m); }
     };
 
     /* ----- 自制配方 ----- */
@@ -117,6 +130,70 @@
       var next = list.filter(function (x) { return x.id !== id; });
       if (next.length !== list.length) { write(KEYS.custom, next); return true; }
       return false;
+    };
+    /* 编辑自制配方：按 id 找到并覆盖可编辑字段，其余保留 */
+    api.updateCustom = function (id, patch) {
+      if (typeof id !== 'string' || !id) throw new Error('非法 id');
+      var list = api.getCustom();
+      var idx = -1;
+      for (var i = 0; i < list.length; i++) if (list[i].id === id) { idx = i; break; }
+      if (idx === -1) throw new Error('找不到要编辑的配方');
+      var rec = list[idx];
+      var name = String(patch.name_zh || patch.name_display || rec.name_display || '').trim();
+      if (!name) throw new Error('配方名称不能为空');
+      var ings = Array.isArray(patch.ingredients_zh) && patch.ingredients_zh.length
+        ? patch.ingredients_zh.map(String) : rec.ingredients_zh;
+      if (!ings || !ings.length) throw new Error('配料不能为空');
+      rec.name = patch.name || name;
+      rec.name_zh = name;
+      rec.name_display = patch.name_display || name;
+      if (patch.category !== undefined) rec.category = patch.category;
+      if (patch.alcoholic !== undefined) rec.alcoholic = patch.alcoholic;
+      if (patch.glass !== undefined) rec.glass = patch.glass;
+      if (patch.ingredients_en !== undefined) rec.ingredients_en = patch.ingredients_en;
+      if (patch.ingredients_zh !== undefined) rec.ingredients_zh = ings;
+      if (patch.instructions_zh !== undefined) rec.instructions_zh = patch.instructions_zh;
+      if (patch.instructions_en !== undefined) rec.instructions_en = patch.instructions_en;
+      if (patch.image !== undefined) rec.image = patch.image;
+      write(KEYS.custom, list);
+      return rec;
+    };
+
+    /* ----- 搜索历史（去重，最多 10 条，最新在前） ----- */
+    api.getSearchHistory = function () {
+      var v = read(KEYS.searchHistory, []);
+      return Array.isArray(v) ? v.filter(function (x) { return typeof x === 'string' && x; }) : [];
+    };
+    api.pushSearchHistory = function (q) {
+      var s = String(q == null ? '' : q).trim();
+      if (!s) return api.getSearchHistory();
+      var list = api.getSearchHistory().filter(function (x) { return x !== s; });
+      list.unshift(s);
+      if (list.length > 10) list = list.slice(0, 10);
+      write(KEYS.searchHistory, list);
+      return list;
+    };
+    api.clearSearchHistory = function () {
+      write(KEYS.searchHistory, []);
+    };
+
+    /* ----- 上次导出备份的时间戳（备份提醒用） ----- */
+    api.getLastBackup = function () {
+      var v = Number(read(KEYS.lastBackup, 0));
+      return isFinite(v) ? v : 0;
+    };
+    api.setLastBackup = function (ts) {
+      write(KEYS.lastBackup, Number(ts) || Date.now());
+    };
+
+    /* ----- 主题（浅色 / 暗色） ----- */
+    api.getTheme = function () {
+      var v = read(KEYS.theme, 'light');
+      return v === 'dark' ? 'dark' : 'light';
+    };
+    api.setTheme = function (t) {
+      write(KEYS.theme, t === 'dark' ? 'dark' : 'light');
+      return api.getTheme();
     };
 
     /* ----- 设置（含自定义价格档位） ----- */
@@ -282,6 +359,7 @@
 
     /* ----- 备份 ----- */
     api.exportBackup = function () {
+      api.setLastBackup(Date.now());
       return {
         app: 'rongjiu',
         schema: SCHEMA,
