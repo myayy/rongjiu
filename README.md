@@ -141,10 +141,10 @@
 
 ### 方式一：下载 Android APK 直接用（手机上最简单）
 
-**[⬇ rongjiu-v1.0-debug.apk (78.9 MB)](https://github.com/myayy/rongjiu/releases/download/v1.0.0/rongjiu-v1.0-debug.apk)** ｜ [全部版本](https://github.com/myayy/rongjiu/releases)
+**[⬇ rongjiu-v1.1-debug.apk (80 MB)](https://github.com/myayy/rongjiu/releases/download/v1.1.0/rongjiu-v1.1-debug.apk)** ｜ [全部版本](https://github.com/myayy/rongjiu/releases)
 
 - 传到手机 → 点开 → 允许「安装未知来源应用」即可安装。
-- 应用名「融酒」，包名 `com.myayy.rongjiu`，v1.0，minSdk 23（Android 6.0+），只申请 `INTERNET` 权限。
+- 应用名「融酒」，包名 `com.myayy.rongjiu`，v1.1.0（versionCode 2），minSdk 23（Android 6.0+），只申请 `INTERNET` 权限。
 - 配方与图片**全部打进 APK**，装完就是完全离线可用，不需要联网。
 - 这是 debug 签名的构建，仅供个人侧载；想自己重打见下方「打包 Android APK」。
 
