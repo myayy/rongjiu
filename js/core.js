@@ -79,12 +79,15 @@
   }
 
   /* 逐字匹配：任意一个 token 命中即保留（OR），所以「莫托」能找到「莫吉托」 */
-  function matchesQuery(drink, q) {
+  function matchesQuery(drink, q, tagsApi) {
     var tokens = queryTokens(q);
     if (!tokens.length) return true;
-    var hay = [
-      drink.name, drink.name_zh, drink.name_display, drink.category, drink.glass
-    ].concat(drink.ingredients_zh || []).concat(drink.ingredients_en || []).join(' ').toLowerCase();
+    // 优先用语义层的「可搜索全文」（含分区名/基酒名），这样照着界面上看到的分区标题也能搜到
+    var hay = (tagsApi && typeof tagsApi.searchText === 'function')
+      ? tagsApi.searchText(drink)
+      : [
+        drink.name, drink.name_zh, drink.name_display, drink.category, drink.glass
+      ].concat(drink.ingredients_zh || []).concat(drink.ingredients_en || []).join(' ').toLowerCase();
     for (var i = 0; i < tokens.length; i++) {
       if (hay.indexOf(tokens[i]) !== -1) return true;
     }
@@ -105,7 +108,7 @@
     if (filters.q) {
       if (filters.exact) {
         if (!matchesQueryExact(drink, filters.q)) return false;
-      } else if (!matchesQuery(drink, filters.q)) return false;
+      } else if (!matchesQuery(drink, filters.q, tagsApi)) return false;
     }
     if (filters.alcoholic) {
       var a = String(drink.alcoholic || '');

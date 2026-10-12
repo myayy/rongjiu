@@ -305,10 +305,11 @@ test('材料建议区：空输入给常见材料、有输入给匹配项、无�
   assert.ok(b.includes('库里没有含'), '无匹配要有兜底提示');
 });
 
-test('酒柜页渲染出建议区，点材料胶囊即加入', () => {
+test('材料弹层渲染出建议区，点材料胶囊即加入', () => {
   const app = makeApp({ seed: 111 });
   go(app, '#/cabinet');
-  const html = viewHtml(app);
+  app.handleAction('openPantry', null);
+  const html = app._env.doc.getElementById('overlay').innerHTML;
   assert.ok(html.includes('id="pantrySuggest"'), '应有建议区容器');
   const m = html.match(/data-act="addPantryName" data-val="([^"]+)"/);
   assert.ok(m, '应渲染出材料胶囊');

@@ -166,7 +166,9 @@ test('酒柜页「喝过的酒」不再重复显示「已喝过」', () => {
   app._store.setRating('cn-001', 4);
   app._env.win.location.hash = '#/cabinet';
   app.onHashChange();
-  const html = app._env.doc.getElementById('view').innerHTML;
+  // 「喝过的酒」在「喝过」Tab 里
+  app.handleAction('cabTab', { getAttribute: () => 'rated' });
+  const html = app._env.doc.getElementById('cabList').innerHTML;
   const times = html.split('已喝过').length - 1;
   assert.ok(times === 1, `「已喝过」应只出现 1 次（星级那处），实际 ${times} 次`);
 });

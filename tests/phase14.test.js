@@ -75,15 +75,16 @@ test('真实 DOM 里打字只换列表区：搜索框节点不变（手机上不
 
   assert.equal(app.state.q, '莫吉托');
   assert.ok(wrap.innerHTML.includes('莫吉托'), '结果区应已更新');
-  assert.equal(host.className, 'filter-host', '进入列表形态：筛选胶囊展开（去掉 bar-min）');
+  assert.equal(host.className, 'filter-host', '筛选条容器保持稳定，打字不重建搜索框');
   assert.ok(app._env.win.location.hash.includes('q='), '搜索词要写回 URL');
 });
 
-test('货架首页只露搜索框，筛选胶囊隐藏在 .bar-min 里', () => {
+test('货架首页也带搜索胶囊与筛选入口', () => {
   const app = makeApp({ seed: 111 });
   const html = viewHtml(app);
-  assert.ok(html.includes('class="filter-host bar-min"'), '首页筛选条应是收起态');
+  assert.ok(html.includes('class="filter-host"'), '首页应有筛选条容器');
   assert.ok(html.includes('id="searchInput"'), '首页要有搜索框');
+  assert.ok(html.includes('data-act="openFilter"'), '首页要有筛选入口');
 });
 
 /* ========== ② 我的材料 ========== */
@@ -91,13 +92,14 @@ test('货架首页只露搜索框，筛选胶囊隐藏在 .bar-min 里', () => {
 test('材料：输入框里有字但草稿是空的，点＋也能加上（不依赖 input 事件）', () => {
   const app = makeApp({ seed: 111 });
   go(app, '#/cabinet');
+  app.handleAction('openPantry', null);
   const input = app._env.doc.getElementById('pantryInput');
   input.value = '冰红茶';
   // 故意不发 input 事件，模拟手机输入法/自动填充漏掉 input 的情况
   assert.equal(app.state.pantryDraft, '');
   click(app._env.doc, { 'data-act': 'addPantry' });
   assert.deepEqual(app._store.getPantry(), ['冰红茶']);
-  assert.ok(viewHtml(app).includes('data-val="冰红茶"'), '应出现材料胶囊');
+  assert.ok(app._env.doc.getElementById('overlay').innerHTML.includes('data-val="冰红茶"'), '应出现材料胶囊');
 });
 
 test('材料：空输入点＋不再静默，给出提示', () => {
@@ -112,14 +114,14 @@ test('材料：空输入点＋不再静默，给出提示', () => {
 });
 
 test('能做的酒：一款都做不了时给出空态说明', () => {
-  const html = UI.cabinetHtml({ pantry: ['宇宙牌咖啡因'], ready: [], near: [] }, Tags);
+  const html = UI.makeableHtml([], [], Tags, ['宇宙牌咖啡因']);
   assert.ok(html.includes('<h3>能做的酒</h3>'), '仍要显示「能做的酒」标题');
   assert.ok(html.includes('暂时没有能做的酒'), '要说清楚为什么没有，实际：' + html.slice(0, 260));
   assert.ok(html.includes('宇宙牌咖啡因'), '把用户录的材料回显出来');
 });
 
 test('能做的酒：还不齐但能凑（只有「还差 1 样」）时，材料齐全也显式说明 0 款', () => {
-  const html = UI.cabinetHtml({ pantry: ['冰红茶'], ready: [], near: [{ drink: DRINKS[0], missing: '威士忌' }] }, Tags);
+  const html = UI.makeableHtml([], [{ drink: DRINKS[0], missing: '威士忌' }], Tags, ['冰红茶']);
   assert.ok(html.includes('材料齐全（0）'), '该明说现在一款都做不出来');
   assert.ok(html.includes('还差 1 样（1）'));
   assert.ok(!html.includes('暂时没有能做的酒'));
@@ -130,7 +132,8 @@ test('能做的酒：有结果时照旧显示两组，不显示空态文案', ()
   go(app, '#/cabinet');
   app._store.addPantry('朗姆酒');
   app.render();
-  const html = viewHtml(app);
+  app.handleAction('cabTab', { getAttribute: () => 'makeable' });
+  const html = app._env.doc.getElementById('cabList').innerHTML;
   assert.ok(html.includes('还差 1 样（') || html.includes('材料齐全（'));
   assert.ok(!html.includes('暂时没有能做的酒'));
 });
@@ -143,16 +146,23 @@ test('能做的酒：只差一样、但跟我手上的材料毫无关系的，�
   assert.equal(g.near.length, 0, '跟冰红茶毫不相干，不该出现在「还差 1 样」里');
 });
 
-test('能做的酒：录「冰红茶」时，推荐里每条都真的用上了它', () => {
+test('材料匹配是「配方材料包含你填的词」的单向判定', () => {
+  // 你填「朗姆酒」→ 命中配方的「白朗姆酒」（配方材料更长，包含你填的）
+  assert.ok(Tags.ingMatches('白朗姆酒', '朗姆酒'), '朗姆酒应命中白朗姆酒');
+  assert.ok(Tags.ingMatches('冰红茶', '冰红茶'), '自己命中自己');
+  // 反向不算：配方材料「茶」/「红茶」不该被你填的「冰红茶」命中
+  assert.ok(!Tags.ingMatches('茶', '冰红茶'), '配方「茶」不该被「冰红茶」命中');
+  assert.ok(!Tags.ingMatches('红茶', '冰红茶'), '配方「红茶」不该被「冰红茶」命中');
+  assert.ok(!Tags.ingMatches('朗姆酒', '白朗姆酒'), '配方「朗姆酒」不该被「白朗姆酒」命中');
+});
+
+test('能做的酒：录「冰红茶」不会因为配方里有「茶」就瞎推', () => {
+  // 库里含「冰红茶」的 4 款兑酒同时还要基酒和柠檬（差 2 样以上），所以一款都不该推荐
   const g = Tags.pantryGroups(DRINKS, ['冰红茶']);
-  assert.ok(g.near.length > 0, '冰红茶能顶上配方里的「茶」，应该还有得推荐');
-  g.near.forEach((x) => {
-    assert.equal(Tags.pantryMissing(x.drink, ['冰红茶']).length, 1, '确实只差一样');
-  });
-  // 以前那批「纯龙舌兰一口饮」「温水」之类只差一样却与冰红茶无关的，必须消失
+  assert.equal(g.ready.length, 0);
+  assert.equal(g.near.length, 0, '不该因为配方材料是「茶」就被推出来');
   const names = g.near.map((x) => x.drink.name_display).join();
-  assert.ok(!names.includes('温水'), '「温水」不该出现，实际：' + names);
-  assert.ok(!names.includes('纯威士忌一口饮'), '「纯威士忌一口饮」不该出现，实际：' + names);
+  assert.ok(!names.includes('草药火焰'), '「草药火焰」（配料只有热丹姆+茶）不该出现');
 });
 
 /* ========== ③ 安卓返回键 ========== */

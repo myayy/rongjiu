@@ -11,9 +11,7 @@
     ratings: 'rj.ratings',
     history: 'rj.history',
     searchHistory: 'rj.searchHistory',
-    lastBackup: 'rj.lastBackup',
-    cabinetAt: 'rj.cabinetAt',
-    theme: 'rj.theme'
+    lastBackup: 'rj.lastBackup'
   };
 
   var SCHEMA = 1;
@@ -71,7 +69,7 @@
     api.addCabinet = function (id) {
       if (typeof id !== 'string' || !id) throw new Error('非法 id');
       var list = api.getCabinet();
-      if (list.indexOf(id) === -1) { list.push(id); write(KEYS.cabinet, list); api.recordCabinetAt(id, Date.now()); return true; }
+      if (list.indexOf(id) === -1) { list.push(id); write(KEYS.cabinet, list); return true; }
       return false;
     };
     api.removeCabinet = function (id) {
@@ -82,15 +80,6 @@
     };
     api.toggleCabinet = function (id) {
       return api.isInCabinet(id) ? (api.removeCabinet(id), false) : (api.addCabinet(id), true);
-    };
-    /* 收藏的时间戳（按收藏时间排序用）。新增时记录，历史遗留的取 0。 */
-    api.getCabinetAt = function (id) {
-      var m = read(KEYS.cabinetAt, {});
-      return (m && Object.prototype.hasOwnProperty.call(m, id)) ? Number(m[id]) || 0 : 0;
-    };
-    api.recordCabinetAt = function (id, ts) {
-      var m = read(KEYS.cabinetAt, {}) || {};
-      if (!Object.prototype.hasOwnProperty.call(m, id)) { m[id] = ts; write(KEYS.cabinetAt, m); }
     };
 
     /* ----- 自制配方 ----- */
@@ -186,20 +175,16 @@
       write(KEYS.lastBackup, Number(ts) || Date.now());
     };
 
-    /* ----- 主题（浅色 / 暗色） ----- */
-    api.getTheme = function () {
-      var v = read(KEYS.theme, 'light');
-      return v === 'dark' ? 'dark' : 'light';
-    };
-    api.setTheme = function (t) {
-      write(KEYS.theme, t === 'dark' ? 'dark' : 'light');
-      return api.getTheme();
-    };
-
     /* ----- 设置（含自定义价格档位） ----- */
     api.getSettings = function () {
       var v = read(KEYS.settings, {});
-      return v && typeof v === 'object' ? v : {};
+      if (!v || typeof v !== 'object') return {};
+      // 旧版本存过 cabinetLayout（酒柜页双布局偏好），经典布局已下线，读时顺手清掉遗留键
+      if (Object.prototype.hasOwnProperty.call(v, 'cabinetLayout')) {
+        delete v.cabinetLayout;
+        write(KEYS.settings, v);
+      }
+      return v;
     };
     api.setSettings = function (patch) {
       var cur = api.getSettings();
@@ -213,7 +198,6 @@
     api.setPriceTiers = function (tiers) {
       return api.setSettings({ priceTiers: tiers });
     };
-
     /* ----- 盲盒去重记忆 ----- */
     api.getSeen = function () {
       var v = read(KEYS.seen, []);

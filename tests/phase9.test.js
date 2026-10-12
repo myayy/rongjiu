@@ -130,28 +130,34 @@ test('pantryGroups：ready 全齐全，near 全差 1 样', () => {
 test('酒柜页：录入材料 → 分「材料齐全 / 还差 1 样」两组；删除后更新', () => {
   const app = makeApp({ seed: 111 });
   go(app, '#/cabinet');
-  let html = viewHtml(app);
-  assert.ok(html.includes('我的材料'), '应有材料面板');
-  assert.ok(html.includes('id="pantryInput"'));
-  assert.ok(!html.includes('<h3>能做的酒</h3>'), '没录入材料时不显示「能做的酒」');
+  // 材料面板收在底部弹层里，先拉开
+  app.handleAction('openPantry', null);
+  const ov = app._env.doc.getElementById('overlay');
+  assert.ok(ov.innerHTML.includes('我的材料'), '应有材料面板');
+  assert.ok(ov.innerHTML.includes('id="pantryInput"'));
 
   const input = app._env.doc.getElementById('pantryInput');
   input.setAttribute('data-pantry-input', '1');
   input.value = '朗姆酒';
   app._env.doc.dispatch('input', { target: input });
   assert.equal(app.state.pantryDraft, '朗姆酒', '打字阶段只记草稿');
-  assert.ok(!viewHtml(app).includes('data-act="delPantry"'), '打字阶段不重渲染');
+  assert.ok(!ov.innerHTML.includes('data-act="delPantry"'), '打字阶段不重渲染');
 
   click(app._env.doc, { 'data-act': 'addPantry' });
   assert.deepEqual(app._store.getPantry(), ['朗姆酒']);
-  html = viewHtml(app);
-  assert.ok(html.includes('data-act="delPantry"'), '出现材料胶囊');
-  assert.ok(viewHtml(app).includes('<h3>能做的酒</h3>'));
+  assert.ok(ov.innerHTML.includes('data-act="delPantry"'), '出现材料胶囊');
+
+  // 「能做的酒」在「能做」Tab 里
+  click(app._env.doc, { 'data-act': 'cabTab', 'data-val': 'makeable' });
+  let html = app._env.doc.getElementById('cabList').innerHTML;
+  assert.ok(html.includes('<h3>能做的酒</h3>'));
   assert.ok(html.includes('材料齐全') || html.includes('还差 1 样'));
 
   click(app._env.doc, { 'data-act': 'delPantry', 'data-val': '朗姆酒' });
   assert.deepEqual(app._store.getPantry(), []);
-  assert.ok(!viewHtml(app).includes('<h3>能做的酒</h3>'));
+  html = viewHtml(app);   // 删材料会整页重渲染，此时看 view
+  assert.ok(html.includes('先录入家里现有的材料'), '没材料时给说法而不是空白');
+  assert.ok(!html.includes('还差 1 样（'), '不该再列出分组');
 });
 
 test('录入材料会归一化（30毫升朗姆酒 → 朗姆酒），回车也能提交', () => {
@@ -179,7 +185,8 @@ test('材料持久化：重新创建 app（模拟刷新）后仍在', () => {
   const app2 = makeApp({ seed: 222, storage: mem });
   go(app2, '#/cabinet');
   assert.deepEqual(app2._store.getPantry(), ['可乐']);
-  assert.ok(viewHtml(app2).includes('data-val="可乐"'));
+  app2.handleAction('openPantry', null);
+  assert.ok(app2._env.doc.getElementById('overlay').innerHTML.includes('data-val="可乐"'));
 });
 
 /* ========== 星级评价 ========== */
@@ -244,7 +251,8 @@ test('酒柜页「喝过的酒」按星级降序', () => {
   app._store.setRating('tcdb-11000', 3);
   app._store.setRating('cn-001', 5);
   go(app, '#/cabinet');
-  const html = viewHtml(app);
+  click(app._env.doc, { 'data-act': 'cabTab', 'data-val': 'rated' });   // 「喝过的酒」在「喝过」Tab
+  const html = app._env.doc.getElementById('cabList').innerHTML;
   assert.ok(html.includes('喝过的酒（2）'));
   assert.ok(html.indexOf('雪碧伏特加') < html.indexOf('莫吉托'), '5 星应排在 3 星前面');
   assert.ok(html.includes('data-act="rate"'));

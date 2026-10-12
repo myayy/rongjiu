@@ -8,8 +8,8 @@
   "id": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f6f4ef",
-  "theme_color": "#b4642a",
+  "background_color": "#0a0d1f",
+  "theme_color": "#0a0d1f",
   "categories": ["food", "lifestyle", "utilities"],
   "icons": [
     {

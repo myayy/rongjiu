@@ -2,7 +2,7 @@
 
 /* P15：体验优化清单落地
    H1 能做的酒规则说明 / H2 基酒视图 / H3 精确匹配+搜索历史 /
-   H4 盲盒默认全选 / H5 自制编辑 / 暗色 / 覆盖导入确认 / 备份提醒 */
+   H4 盲盒默认全选 / H5 自制编辑 / 单一主题 / 覆盖导入确认 / 备份提醒 */
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -45,7 +45,7 @@ function viewHtml(app) {
 
 /* H1：能做的酒规则说明 */
 test('H1 能做的酒顶部有规则说明', () => {
-  const html = UI.cabinetHtml({ pantry: ['朗姆酒'], ready: [], near: [], cabinet: [], rated: [], history: [] }, Tags);
+  const html = UI.makeableHtml([], [], Tags, ['朗姆酒']);
   assert.ok(html.includes('仅展示「材料齐全」或只差 1 样材料的配方'), '应有规则说明');
   assert.ok(html.includes('缺 2 样及以上的不会在此显示'));
 });
@@ -124,14 +124,16 @@ test('H5 编辑自制配方：回填、保存覆盖、保留 id', () => {
   assert.equal(app._store.getCustom().length, 1, '覆盖而非新增');
 });
 
-/* 暗色主题 */
-test('暗色：设置里出现切换项，切换后写回 data-theme', () => {
+/* 单一主题：改为暗黑星空后不再有明暗切换 */
+test('单一模式：设置里没有主题切换项，store 也不再保存主题', () => {
   const app = makeApp({ seed: 1 });
   app.handleAction('settings', null);
-  assert.ok(app._env.doc.getElementById('overlay').innerHTML.includes('切换为'));
-  app.handleAction('toggleTheme', null);
-  assert.equal(app._store.getTheme(), 'dark');
-  assert.equal(app._env.doc.body.getAttribute('data-theme'), 'dark');
+  const ov = app._env.doc.getElementById('overlay').innerHTML;
+  assert.ok(!ov.includes('toggleTheme'), '设置里不该再有主题切换入口');
+  assert.ok(!ov.includes('切换为'), '设置里不该再有明暗模式提示');
+  assert.equal(app._store.getTheme, undefined, 'store 不再提供 getTheme');
+  assert.equal(app._store.setTheme, undefined, 'store 不再提供 setTheme');
+  assert.equal(RJStore.KEYS.theme, undefined, '不再有 rj.theme 键');
 });
 
 /* 覆盖导入确认 */
@@ -170,4 +172,38 @@ test('自制配方卡片带编辑入口（card 与 shelf-card 都有）', () => 
   assert.ok(UI.shelfCardHtml(d, Tags).includes('data-act="editCustom"'), '货架卡片应有编辑');
   const builtin = DRINKS[0];
   assert.ok(!UI.cardHtml(builtin, {}, Tags).includes('editCustom'), '内置配方不加编辑');
+});
+
+/* ---- 搜索能匹配界面上的分区标题（「中国饮料兑酒」这类） ---- */
+test('searchText：把所属分区名并入可搜索全文', () => {
+  const cn = DRINKS.find((d) => String(d.id).indexOf('cn-') === 0);
+  assert.ok(cn, '应有 cn- 兑酒配方');
+  const text = Tags.searchText(cn);
+  assert.ok(text.includes('中国饮料兑酒'), '应含分区标题，实际: ' + text.slice(0, 80));
+  // 分区标题是有「中国」前缀的，而数据里的 category 只有「饮料兑酒」
+  assert.ok(text.includes('饮料兑酒'));
+});
+
+test('照着分区标题搜能搜到（「中国饮料兑酒」36 条）', () => {
+  const hit = DRINKS.filter((d) => Tags.searchText(d).includes('中国饮料兑酒'));
+  assert.equal(hit.length, 36);
+  assert.ok(hit.every((d) => String(d.id).indexOf('cn-') === 0));
+  // 各分区标题都应可搜
+  for (const [label, n] of [['一口闷 Shot', 74], ['无酒精特调', 271], ['伏特加调酒', 217]]) {
+    const h = DRINKS.filter((d) => Tags.searchText(d).includes(label.toLowerCase()));
+    assert.equal(h.length, n, label + ' 应命中 ' + n + ' 条');
+  }
+});
+
+test('酒柜页没有搜索框（该功能已按需求移除）', () => {
+  const app = makeApp({ seed: 1 });
+  app._store.addCabinet('cn-001');
+  go(app, '#/cabinet');
+  const html = viewHtml(app);
+  assert.ok(html.includes('我的酒柜（1 瓶）'), '收藏列表照常渲染');
+  assert.ok(html.includes('雪碧伏特加'), '收藏的兑酒应在列表里');
+  assert.ok(!html.includes('id="cabinetQ"'), '不该再有酒柜搜索框');
+  assert.ok(!html.includes('data-cabinet-q'), '不该再有搜索框的挂点');
+  assert.ok(!html.includes('data-act="cabMode"'), '不该再有排序开关');
+  assert.ok(!html.includes('data-act="searchAll"'), '不该再有跳转按钮');
 });

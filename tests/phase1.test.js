@@ -14,9 +14,9 @@ test('js/data.js 存在且可加载', () => {
   assert.ok(Array.isArray(globalThis.DRINKS), 'globalThis.DRINKS 应为数组');
 });
 
-test('配方总数为 1341（跨源同名去重后）', () => {
+test('配方总数为 1369（跨源同名去重 + 小红书/抖音采集入库后）', () => {
   require(path.join(ROOT, 'js', 'data.js'));
-  assert.equal(globalThis.DRINKS.length, 1341);
+  assert.equal(globalThis.DRINKS.length, 1369);
 });
 
 test('每条配方字段完整', () => {
@@ -28,8 +28,11 @@ test('每条配方字段完整', () => {
     }
     assert.ok(Array.isArray(d.ingredients_zh), `${d.id} ingredients_zh 应为数组`);
     assert.ok(d.ingredients_zh.length > 0, `${d.id} 配料为空`);
-    assert.match(d.id, /^(tcdb-\d+|od-.+|dy-.+|cn-.+)$/, `${d.id} 格式非法`);
-    assert.match(d.name_display, /（.+）/, `${d.id} name_display 应为「中文（English）」格式`);
+    assert.match(d.id, /^(tcdb-\d+|od-.+|dy-.+|cn-.+|xhs-.+)$/, `${d.id} 格式非法`);
+    // xhs- 是社媒采集来的国产便利店特调，只有中文名，不强求「中文（English）」格式
+    if (!/^xhs-/.test(d.id)) {
+      assert.match(d.name_display, /（.+）/, `${d.id} name_display 应为「中文（English）」格式`);
+    }
   }
 });
 
@@ -50,7 +53,7 @@ test('图片路径均指向真实文件', () => {
       `${d.id} 图片不存在: ${d.image}`
     );
   }
-  assert.ok(withImage >= 1340, `带图配方应 >=1340，实际 ${withImage}`);
+  assert.ok(withImage >= 1361, `带图配方应 >=1361，实际 ${withImage}`);
 });
 
 test('双击打开的 index.html 引用的所有本地资源路径合法', () => {

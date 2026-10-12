@@ -25,6 +25,7 @@
       tastes: [],
       ingredients: [],
       strength: '',
+      filterNav: 'taste',   // 筛选面板左侧当前分组：taste / ing / str
       shown: PAGE_SIZE,     // 当前已加载条数（不是页码）
       lastTotal: 0,         // 上次渲染时过滤后的总数
       scrollMemo: 0,        // 离开推荐页进详情那一刻的滚动位置
@@ -37,8 +38,7 @@
       tierDraft: null,
       recipeDraft: null,
       share: null,          // 详情页「分享」弹层的配方 id
-      cabinetQ: '',         // 酒柜页收藏搜索词
-      cabinetMode: 'time',  // 酒柜收藏排序：time=按收藏时间 / spirit=按基酒分组
+      cabinetTab: 'cabinet',// 酒柜页中部当前 Tab：cabinet / rated / makeable
       overlay: null,
       confirm: null,        // 应用内确认弹层的文案与「确定」回调
       pool: []
@@ -196,12 +196,12 @@
       return '<div id="listBox">' + parts.listBox + '</div>' + parts.footer;
     }
 
-    /* 筛选条外层。货架首页用 .bar-min 只露搜索框，进列表形态后展开全部筛选胶囊。
-       两种形态共用同一段 DOM，只为后面「打字不重建搜索框」留出切换余地。 */
-    function filterHostHtml(extraClass) {
+    /* 筛选条外层：搜索胶囊 + 筛选 tab 行（点 tab 拉起筛选面板）。
+      两种形态共用同一段 DOM，只为后面「打字不重建搜索框」留出切换余地。 */
+    function filterHostHtml() {
       var hist = (!state.q && !state.exact) ? ui.searchHistoryHtml(store.getSearchHistory()) : '';
-      return '<div id="filterHost" class="filter-host' + (extraClass ? ' ' + extraClass : '') + '">'
-        + ui.filterBarHtml(currentFilters(), tags.commonIngredients(store.allRecipes(), ING_CHIPS), tags)
+      return '<div id="filterHost" class="filter-host">'
+        + ui.filterBarHtml(currentFilters())
         + hist
         + '</div>';
     }
@@ -227,7 +227,7 @@
         head = sec ? ui.sectionHeadHtml(tags.sectionById(sec), parts.total) : '';
       }
       var html = head
-        + filterHostHtml('')
+        + filterHostHtml()
         + '<div id="listWrap">' + listRegionHtml(parts) + '</div>';
       view().innerHTML = html;
       // 同步 listBox（Node 假 DOM 中与 view 分离；真实 DOM 中为幂等）
@@ -269,7 +269,7 @@
       }
       state.lastTotal = sections.reduce(function (n, s) { return n + s.drinks.length; }, 0);
       state.shown = PAGE_SIZE;   // 回首页视为重新浏览
-      view().innerHTML = filterHostHtml('bar-min')
+      view().innerHTML = filterHostHtml()
         + '<div id="listWrap">'
         + '<div id="allEntry">' + ui.allEntryHtml(store.allRecipes().length) + '</div>'
         + '<button class="entry-btn compact" data-act="moreSection" data-val="spirits">'
@@ -296,7 +296,7 @@
       if (!host || !host.parentNode || !wrap || !wrap.parentNode) return false;
       // 空查询要落回货架首页，那是另一种形态，交给整页渲染
       if (!currentSec() && !hasFilter()) return false;
-      host.className = 'filter-host';      // 首页 → 列表：展开口味/材料/强度胶囊
+      host.className = 'filter-host';
       var parts = recommendParts();
       state.lastTotal = parts.total;
       wrap.innerHTML = listRegionHtml(parts);
@@ -471,24 +471,10 @@
       return hits.slice(0, 24).map(function (it) { return it.name; });
     }
 
-    /* 酒柜页：我的材料 → 能做的酒 → 我的酒柜 → 喝过的酒 → 浏览历史入口 */
-    function renderCabinet() {
+    /* 酒柜页数据组装：两套布局共用同一份，避免各查一遍库 */
+    function cabinetPayload() {
       var ids = store.getCabinet();
       var cabinet = ids.map(function (id) { return store.findRecipe(id); }).filter(Boolean);
-      // 我的酒柜：按搜索词过滤，再按分组/时间排序（保留 id 顺序的旧收藏在前）
-      var q = String(state.cabinetQ || '').trim().toLowerCase();
-      if (q) {
-        cabinet = cabinet.filter(function (d) {
-          var hay = (d.name_display || d.name_zh || d.name || '') + ' ' + (d.category || '') + ' '
-            + (d.ingredients_zh || []).join(' ') + ' ' + (d.ingredients_en || []).join(' ');
-          return hay.toLowerCase().indexOf(q) !== -1;
-        });
-      }
-      if (state.cabinetMode === 'time') {
-        cabinet = cabinet.slice().sort(function (a, b) {
-          return (store.getCabinetAt(b.id) || 0) - (store.getCabinetAt(a.id) || 0);
-        });
-      }
       var pantry = store.getPantry();
       var groups = pantry.length ? tags.pantryGroups(store.allRecipes(), pantry) : { ready: [], near: [] };
       var ratings = store.getRatings();
@@ -501,18 +487,32 @@
       var history = store.getHistory().map(function (x) {
         return { drink: store.findRecipe(x.id), at: x.at, stamp: core.formatStamp(x.at) };
       }).filter(function (x) { return x.drink; });
-      view().innerHTML = ui.cabinetHtml({
+      return {
         pantry: pantry,
         pantryDraft: state.pantryDraft,
         pantrySuggest: pantrySuggestNames(),
         ready: groups.ready,
         near: groups.near,
         cabinet: cabinet,
-        cabinetQ: state.cabinetQ,
-        cabinetMode: state.cabinetMode,
         rated: rated,
-        history: history
-      }, tags);
+        history: history,
+        tab: state.cabinetTab
+      };
+    }
+
+    /* 酒柜页：固定统计卡 → Tab（酒柜 / 喝过 / 能做）→ 列表 → 浏览历史入口 */
+    function renderCabinet() {
+      view().innerHTML = ui.cabinetProfileHtml(cabinetPayload(), tags);
+    }
+
+    /* 切 Tab：只替换 Tab 栏与中部列表，不整页重渲染（切换更跟手） */
+    function renderCabinetTab() {
+      var parts = ui.cabinetProfileParts(cabinetPayload(), tags);
+      var tabsEl = doc.getElementById('cabTabs');
+      var listEl = doc.getElementById('cabList');
+      if (!tabsEl || !listEl) { renderCabinet(); return; }
+      tabsEl.innerHTML = parts.tabs;
+      listEl.innerHTML = parts.body;
     }
 
     /* 浏览历史（独立页面，从酒柜页底部的入口进来） */
@@ -534,7 +534,8 @@
       view().innerHTML = ui.detailHtml(d, {
         inCabinet: store.isInCabinet(d.id),
         customTiers: store.getPriceTiers(),
-        rating: store.getRating(d.id)
+        rating: store.getRating(d.id),
+        pantry: store.getPantry()
       }, tags);
     }
 
@@ -566,7 +567,7 @@
         alcoholic: state.blind.alcoholic,
         result: state.blind.result,
         resultInCabinet: state.blind.result ? store.isInCabinet(state.blind.result.id) : false
-      }, tiers(), tags);
+      }, tiers(), tags, store.getPantry());
     }
 
     function renderDrink() {
@@ -601,13 +602,23 @@
       if (!state.overlay) { ov.className = 'overlay hidden'; ov.innerHTML = ''; return; }
       ov.className = 'overlay';
       var kind = state.overlay;
-      if (kind === 'settings') ov.innerHTML = ui.settingsHtml({ tierCount: tiers().length, theme: store.getTheme() });
+      if (kind === 'settings') ov.innerHTML = ui.settingsHtml({ tierCount: tiers().length });
       else if (kind === 'share') ov.innerHTML = ui.shareHtml(state.share ? (store.findRecipe(state.share) || {}).name_display || '' : '');
       else if (kind === 'newRecipe') { ov.innerHTML = ui.addFormHtml(state.recipeDraft || null); bindRecipeImageInput(); }
       else if (kind === 'tiers') ov.innerHTML = ui.tiersHtml(state.tierDraft || tiers(), state.tierErr || '');
       else if (kind === 'about') ov.innerHTML = ui.aboutHtml();
       else if (kind === 'confirm') ov.innerHTML = ui.confirmHtml(state.confirm || {});
       else if (kind === 'import') ov.innerHTML = ui.importHtml();
+      // 新版酒柜布局把「我的材料」收成头部入口，面板改成底部弹层（复用的还是同一块 UI）
+      else if (kind === 'pantry') ov.innerHTML = ui.pantrySheetHtml(store.getPantry(), state.pantryDraft, pantrySuggestNames());
+      else if (kind === 'filter') ov.innerHTML = ui.filterPanelHtml(
+        currentFilters(), tags.commonIngredients(store.allRecipes(), ING_CHIPS), tags, state.filterNav, state.lastTotal);
+    }
+
+    /* 材料增删后该重绘谁：面板在弹层里，只重绘页面看不到反馈 */
+    function refreshAfterPantry() {
+      if (state.overlay === 'pantry') renderOverlay();
+      if (state.route.page === 'cabinet') renderCabinet();
     }
 
     /* ---------- 导航 ---------- */
@@ -644,7 +655,7 @@
       }
       // 进详情：保留 restoreScroll / scrollMemo，等返回时用
 
-      if (r.page !== 'box') { state.blind.result = state.blind.result; }
+
       render();
 
       var v = view();
@@ -767,7 +778,7 @@
       if (!d) { closeOverlay(); return; }
       closeOverlay();
       toast('正在生成卡片图…');
-      ui.recipeCardToImage ? null : null; // 占位，避免 lint
+
       try {
         if (globalThis.RJUICard && globalThis.RJUICard.render) {
           globalThis.RJUICard.render(d).then(function (dataUrl) {
@@ -946,9 +957,15 @@
     function blindDraw() {
       recomputePool();
       if (!state.pool.length) { toast('当前条件没有匹配的酒'); return { ok: false }; }
-      var picked = core.pickRandom(state.pool, { exclude: state.blind.lastId ? [state.blind.lastId] : [] });
+      // 「不连续抽到同一瓶」的记忆要持久化（最近 50 条），重启 App 后依然生效；
+      // 池子全被抽过时 pickRandom 会自动回退全池，不会卡死
+      var exclude = store.getSeen().slice();
+      if (state.blind.lastId && exclude.indexOf(state.blind.lastId) === -1) exclude.push(state.blind.lastId);
+      var picked = core.pickRandom(state.pool, { exclude: exclude });
+      if (!picked) { toast('当前条件没有匹配的酒'); return { ok: false }; }
       state.blind.result = picked;
       state.blind.lastId = picked.id;
+      try { store.pushSeen(picked.id); } catch (e) { /* 持久化失败只影响重启后的去重 */ }
       render();
       return { ok: true, result: picked };
     }
@@ -993,13 +1010,20 @@
           var okAdd = false;
           try { okAdd = store.addPantry(nm); } catch (e) { /* ignore */ }
           state.pantryDraft = '';
-          renderCabinet();
+          refreshAfterPantry();
           toast(okAdd ? '已加入材料：' + nm : '这个材料已经在列表里了');
           break;
         }
         case 'delPantry':
           store.removePantry(el.getAttribute('data-val'));
-          renderCabinet();
+          refreshAfterPantry();
+          break;
+        case 'openPantry':
+          openOverlay('pantry');
+          break;
+        case 'cabTab':
+          state.cabinetTab = el.getAttribute('data-val') || 'cabinet';
+          renderCabinetTab();
           break;
         case 'delHistory':
           store.removeHistory(el.getAttribute('data-val'));
@@ -1075,6 +1099,26 @@
           render();
           if (view()) view().scrollTop = 0;
           break;
+        case 'openFilter':
+          // 拉起筛选面板（拼多多式全屏面板），选项点了即时生效
+          state.filterNav = el.getAttribute('data-val') || 'taste';
+          openOverlay('filter');
+          break;
+        case 'filterNav':
+          state.filterNav = el.getAttribute('data-val') || 'taste';
+          renderOverlay();
+          break;
+        case 'closeFilter':
+          closeOverlay();
+          break;
+        case 'resetFilter':
+          state.tastes = []; state.ingredients = []; state.strength = '';
+          resetRecommendList();
+          render();
+          break;
+        case 'clearQuery':
+          applyQuery('', null);
+          break;
         case 'alc':
           state.blind.alcoholic = el.getAttribute('data-val');
           state.blind.result = null;
@@ -1088,10 +1132,6 @@
           break;
         case 'editCustom':
           editCustom(id);
-          break;
-        case 'cabMode':
-          state.cabinetMode = el.getAttribute('data-val') === 'spirit' ? 'spirit' : 'time';
-          renderCabinet();
           break;
         case 'gotoRecommend':
           navigate('#/recommend');
@@ -1184,6 +1224,7 @@
           break;
         case 'saveTiers':
           return saveTiers();
+
         case 'about':
           openOverlay('about');
           break;
@@ -1196,11 +1237,6 @@
           break;
         case 'shareImage':
           shareImage();
-          break;
-        case 'toggleTheme':
-          store.setTheme(store.getTheme() === 'dark' ? 'light' : 'dark');
-          applyTheme();
-          renderOverlay();
           break;
         case 'export': {
           var r = exportBackup();
@@ -1297,7 +1333,7 @@
         try { if (store.addPantry(n)) added.push(n); } catch (e) { /* 单个失败不影响其余 */ }
       });
       state.pantryDraft = '';
-      renderCabinet();
+      refreshAfterPantry();
       var again = doc.getElementById('pantryInput');
       if (again) {
         if (again.focus) again.focus();
@@ -1400,12 +1436,6 @@
           if (sg) sg.innerHTML = ui.pantrySuggestHtml(pantrySuggestNames(), state.pantryDraft);
           return;
         }
-        // 酒柜收藏搜索框：只更新 state + 重画酒柜（输入框在列表上方，不在被替换的卡片区，焦点安全）
-        if (t.getAttribute('data-cabinet-q') !== null) {
-          state.cabinetQ = String(t.value || '');
-          renderCabinet();
-          return;
-        }
         var labelIdx = t.getAttribute('data-tier-label');
         var minIdx = t.getAttribute('data-tier-min');
         var maxIdx = t.getAttribute('data-tier-max');
@@ -1463,18 +1493,9 @@
       state.blind.tierIds = null;
       migratePantry();          // 先把历史遗留的脏材料标签（整串那种）拆干净
       bindEvents();
-      applyTheme();
       checkBackupReminder();    // 距上次备份超过 30 天给个轻提示
       if (!win.location.hash) win.location.hash = '#/recommend';
       onHashChange();
-    }
-
-    /* 暗色主题：把值写回 <html data-theme>，样式层用 CSS 变量切换 */
-    function applyTheme() {
-      try {
-        var root = doc.documentElement || doc.body;
-        if (root && root.setAttribute) root.setAttribute('data-theme', store.getTheme());
-      } catch (e) { /* 假 DOM 忽略 */ }
     }
 
     /* 距上次导出备份超过 30 天 → 轻量提醒一次（不阻断） */

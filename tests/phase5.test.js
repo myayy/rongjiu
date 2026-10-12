@@ -80,20 +80,38 @@ test('自制配方详情显示删除按钮', () => {
   assert.ok(html.includes('点击移除'));
 });
 
-test('筛选栏渲染搜索框/口味/材料/酒精强度', () => {
-  const ings = Tags.commonIngredients(DRINKS, 24);
-  const html = UI.filterBarHtml({ q: 'mojito', tastes: ['甜'], ingredients: [ings[0].name], strength: 'high' }, ings, Tags);
+test('筛选栏渲染搜索胶囊与筛选 tab 行', () => {
+  const html = UI.filterBarHtml({ q: 'mojito', tastes: ['甜'], ingredients: ['青柠汁'], strength: 'high' });
   assert.ok(html.includes('id="searchInput"'));
   assert.ok(html.includes('value="mojito"'));
-  assert.ok(html.includes('口味'));
-  assert.ok(html.includes('材料'));
-  assert.ok(html.includes('酒精强度'));
-  assert.ok(html.includes('data-act="fTaste"'));
-  assert.ok(html.includes('data-act="fIng"'));
-  assert.ok(html.includes('data-act="fStr"'));
-  assert.ok(html.includes('class="fchip on" data-act="fTaste" data-val="甜"'), '当前口味应高亮');
-  assert.ok(html.includes('class="fchip on" data-act="fStr" data-val="high"'), '当前强度应高亮');
-  assert.ok(html.includes('无酒精') && html.includes('低度') && html.includes('高度'));
+  assert.ok(html.includes('data-act="clearQuery"'), '搜索胶囊内应有清除按钮');
+  for (const label of ['口味', '材料', '酒精强度', '筛选']) {
+    assert.ok(html.includes(label), '缺少 tab ' + label);
+  }
+  assert.ok(html.includes('class="ftab on" data-act="openFilter" data-val="taste"'), '有选中口味时 tab 应高亮');
+});
+
+test('筛选面板渲染口味/材料/酒精强度三组选项', () => {
+  const ings = Tags.commonIngredients(DRINKS, 24);
+  const st = { tastes: ['甜'], ingredients: [ings[0].name], strength: 'high' };
+  const tasteHtml = UI.filterPanelHtml(st, ings, Tags, 'taste', 12);
+  assert.ok(tasteHtml.includes('data-act="fTaste"'));
+  assert.ok(tasteHtml.includes('class="opt on" data-act="fTaste" data-val="甜"'), '当前口味应高亮');
+  assert.ok(tasteHtml.includes('data-act="resetFilter"'), '底部应有重置');
+  assert.ok(tasteHtml.includes('data-act="closeFilter"'), '底部应有完成');
+  assert.ok(tasteHtml.includes('12 款'), '应显示当前结果数');
+
+  const ingHtml = UI.filterPanelHtml(st, ings, Tags, 'ing', 12);
+  assert.ok(ingHtml.includes('data-act="fIng"'));
+  assert.ok(ingHtml.includes('class="opt on" data-act="fIng" data-val="' + ings[0].name + '"'), '当前材料应高亮');
+
+  const strHtml = UI.filterPanelHtml(st, ings, Tags, 'str', 3);
+  assert.ok(strHtml.includes('class="opt on" data-act="fStr" data-val="high"'), '当前强度应高亮');
+  assert.ok(strHtml.includes('无酒精') && strHtml.includes('低度') && strHtml.includes('高度'));
+  // 左侧导航三组都在，且各自带已选数量
+  for (const label of ['口味', '材料', '酒精强度']) {
+    assert.ok(strHtml.includes('<span>' + label + '</span>'), '左侧导航缺少 ' + label);
+  }
 });
 
 test('盲盒页渲染档位/口感/酒精度与结果区', () => {
@@ -127,6 +145,20 @@ test('新增配方表单字段齐全', () => {
     assert.ok(html.includes('id="' + id + '"'), '缺少字段 ' + id);
   }
   assert.ok(html.includes('data-act="saveRecipe"'));
+});
+
+test('分类 / 杯型是下拉选择，且能兜住不在标准列表里的旧值', () => {
+  const html = UI.addFormHtml();
+  assert.ok(/<select id="fCategory">/.test(html), '分类应为下拉选择');
+  assert.ok(/<select id="fGlass">/.test(html), '杯型应为下拉选择');
+  assert.ok(html.includes('<option value="Cocktail"'), '分类应含标准项');
+  assert.ok(html.includes('<option value="Highball glass"'), '杯型应含标准项');
+  assert.ok(!html.includes('id="fCategory" placeholder'), '不应再是自由文本输入');
+
+  // 老数据里的非标准值不能被丢掉：编辑时应补一个选中项兜住
+  const old = UI.addFormHtml({ editId: 'my-x', _source: { category: '自制', glass: '随手拿的杯子' } });
+  assert.ok(old.includes('<option value="自制" selected>'), '旧分类值应保留并选中');
+  assert.ok(old.includes('<option value="随手拿的杯子" selected>'), '旧杯型值应保留并选中');
 });
 
 test('设置菜单包含全部入口', () => {

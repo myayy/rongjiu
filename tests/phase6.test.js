@@ -262,11 +262,15 @@ test('设置 → 新增配方 → 校验 → 保存进推荐页', () => {
 
   // 正常保存
   app._env.doc.getElementById('fIng').value = '45毫升伏特加\n15毫升柠檬汁\n';
-  app._env.doc.getElementById('fCategory').value = '自制';
+  app._env.doc.getElementById('fCategory').value = 'Cocktail';
+  app._env.doc.getElementById('fGlass').value = 'Highball glass';
   app._env.doc.getElementById('fStep').value = '摇匀。';
   r = app.saveRecipe();
   assert.equal(r.ok, true);
   assert.match(r.record.id, /^my-/);
+  assert.equal(r.record.category, 'Cocktail', '分类按标准值存下来');
+  assert.equal(Tags.categoryLabel(r.record.category), '鸡尾酒', '详情页能映射成中文');
+  assert.equal(Tags.glassLabel(r.record.glass), '高球杯');
   assert.equal(app.state.overlay, null);
   assert.equal(app._store.getCustom().length, 1);
   assert.equal(app._store.allRecipes().length, DRINKS.length + 1);
@@ -530,6 +534,24 @@ test('价格档位校验：max<=min 与空档位被拒绝', () => {
   r = app.saveTiers();
   assert.equal(r.ok, false);
   assert.ok(app._env.doc.getElementById('overlay').innerHTML.includes('没填名称'), '空档位应提示而不是静默丢弃');
+});
+
+test('价格档位「保存」按钮必须真的接到处理函数上', () => {
+  // 曾经按钮有 data-act="saveTiers" 却没接 case，点击后什么都不发生：
+  // 单测直接调 saveTiers() 是测不出来的，必须走「点击 → handleAction」这条路
+  const app = makeApp();
+  app.handleAction('tiers', null);
+  app.handleAction('addTier', null);
+  const r = app.handleAction('saveTiers', null);
+  assert.ok(r && r.ok === false, '空档位应被拒绝');
+  assert.equal(app.state.overlay, 'tiers', '校验失败时弹层保持打开');
+  assert.ok(app._env.doc.getElementById('overlay').innerHTML.includes('没填名称'));
+
+  app.handleAction('delTier', { getAttribute: () => '3' });
+  const ok = app.handleAction('saveTiers', null);
+  assert.ok(ok && ok.ok === true, '保存按钮应能真正写库');
+  assert.equal(app._store.getPriceTiers().length, 3);
+  assert.equal(app.state.overlay, null, '保存成功后关闭弹层');
 });
 
 test('恢复默认档位', () => {

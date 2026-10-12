@@ -137,10 +137,14 @@
   }
 
   /* ---------- 我的材料 → 能做的酒 ---------- */
-  /* 双向包含：家里有「朗姆酒」能命中配方的「白朗姆酒」，反向也命中 */
-  function ingMatches(a, b) {
-    if (!a || !b) return false;
-    return a === b || a.indexOf(b) !== -1 || b.indexOf(a) !== -1;
+  /* 材料匹配（单向包含）：配方里的材料名「包含」你填的材料名才算命中。
+     例：你填「朗姆酒」能命中配方的「白朗姆酒」（配方材料更长，包含你填的）。
+     **反向不算** —— 配方材料「茶」不会因为你填了「冰红茶」而被命中，
+     否则录「冰红茶」会推出一堆只含「茶」的酒，属于模糊误报。
+     参数顺序固定为 (配方里的材料名, 你填的材料名)。 */
+  function ingMatches(recipeIng, mine) {
+    if (!recipeIng || !mine) return false;
+    return recipeIng === mine || recipeIng.indexOf(mine) !== -1;
   }
 
   /* 这条配方还缺哪些材料：
@@ -165,6 +169,22 @@
     }
     if (!countable) return null;
     return need;
+  }
+
+  /* 逐条配料对「我的材料」打标（详情页配料列表标「已有」用）：
+     返回与 ingredients_zh 等长的布尔数组；冰/水（ING_STOP）不算，永远 false。
+     判定与 pantryGroups 同一规则：配方材料名包含你填的材料名才算命中。 */
+  function pantryFlags(drink, pantry) {
+    var have = (pantry || []).filter(function (n) { return typeof n === 'string' && n; });
+    var arr = Array.isArray(drink.ingredients_zh) ? drink.ingredients_zh : [];
+    return arr.map(function (x) {
+      var n = ingredientName(x);
+      if (!n || ING_STOP[n]) return false;
+      for (var j = 0; j < have.length; j++) {
+        if (ingMatches(n, have[j])) return true;
+      }
+      return false;
+    });
   }
 
   /* 配方里有没有至少一样是「我手上有的」材料（冰/水不算） */
@@ -487,6 +507,23 @@
     return null;
   }
 
+  /* 一条配方的「可搜索全文」（小写）：酒名 / 分类 / 杯型 / 配料 / 所属分区名 / 基酒名。
+     加分区名是为了让用户照着界面上看到的分区标题也能搜到 ——
+     例如分区叫「中国饮料兑酒」，而数据里 category 只存了「饮料兑酒」，
+     用户搜「中国饮料兑酒」时按原字段是查不到的。 */
+  function searchText(drink) {
+    if (!drink) return '';
+    var parts = [drink.name, drink.name_zh, drink.name_display, drink.category, drink.glass]
+      .concat(drink.ingredients_zh || []).concat(drink.ingredients_en || []);
+    var sec = sectionById(sectionOf(drink));
+    if (sec && sec.label) parts.push(sec.label);
+    var sps = spiritIdsOf(drink);
+    for (var i = 0; i < SPIRITS.length; i++) {
+      if (sps.indexOf(SPIRITS[i].id) !== -1) parts.push(SPIRITS[i].label);
+    }
+    return parts.filter(Boolean).join(' ').toLowerCase();
+  }
+
   function priceInTier(price, tier) {
     return price >= tier.min && price < tier.max;
   }
@@ -515,6 +552,7 @@
     hasIngredient: hasIngredient,
     ingMatches: ingMatches,
     pantryMissing: pantryMissing,
+    pantryFlags: pantryFlags,
     pantryGroups: pantryGroups,
     estimatePrice: estimatePrice,
     categoryLabel: categoryLabel,
@@ -529,6 +567,7 @@
     spiritIdsOf: spiritIdsOf,
     groupBySpirit: groupBySpirit,
     spiritById: spiritById,
+    searchText: searchText,
     defaultTiers: defaultTiers,
     normalizeTiers: normalizeTiers,
     priceInTier: priceInTier,
