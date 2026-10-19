@@ -276,16 +276,20 @@
       + '</div>';
   }
 
-  /* 搜索历史胶囊：有词就点一下直接搜 */
-  function searchHistoryHtml(items) {
+  /* 搜索历史胶囊：有词就点一下直接搜。
+     拆成 Inner + Html 两层 —— 外层 #searchHistory 常驻（空时靠 CSS :empty 隐藏），
+     打字时只换内层，既不丢输入框焦点，又能在有查询词时把「最近搜索」及时收起。 */
+  function searchHistoryInner(items) {
     if (!items || !items.length) return '';
-    return '<div id="searchHistory" class="hist-row">'
-      + '<span class="hist-label">最近搜索</span>'
+    return '<span class="hist-label">最近搜索</span>'
       + items.map(function (q) {
         return '<button class="fchip" data-act="searchHist" data-val="' + esc(q) + '">' + esc(q) + '</button>';
       }).join('')
-      + '<button class="hist-clear" data-act="clearSearchHist" title="清空搜索历史">清空</button>'
-      + '</div>';
+      + '<button class="hist-clear" data-act="clearSearchHist" title="清空搜索历史">清空</button>';
+  }
+
+  function searchHistoryHtml(items) {
+    return '<div id="searchHistory" class="hist-row">' + searchHistoryInner(items) + '</div>';
   }
 
   /* ---- 列表底部：加载更多 / 已到底 ---- */
@@ -342,39 +346,80 @@
   }
 
   /* ---- 能做的酒 ---- */
+  /* 一组全列出来，不再截前 20 款（用户要求「要全部显示」） */
   function makeableGroupHtml(label, items, tagsApi) {
     if (!items.length) return '';
-    var limit = 20;
-    var shown = items.slice(0, limit);
     return '<div class="fgroup-label">' + esc(label) + '（' + items.length + '）</div>'
-      + shown.map(function (x) {
+      + items.map(function (x) {
         return cardHtml(x.drink, { missing: x.missing, compact: true }, tagsApi);
-      }).join('')
-      + (items.length > limit ? '<div class="more-hint">仅显示前 ' + limit + ' 款，共 ' + items.length + ' 款</div>' : '');
+      }).join('');
   }
 
-  function makeableHtml(ready, near, tagsApi, pantry) {
+  /* 缺料档位的统一叫法：0 → 材料齐全，n → 还差 n 样 */
+  function missLabel(n) {
+    return n === 0 ? '材料齐全' : '还差 ' + n + ' 样';
+  }
+
+  /* 缺料筛选条：把 0~maxMiss 各档的数量摆出来，点一下开关该档。
+     这是「我只有苏打水，也想看看还差 2 样、3 样的酒」的入口。 */
+  function missChipsHtml(buckets, depth) {
+    return '<div class="chips miss-filter">' + buckets.map(function (b) {
+      var on = depth.indexOf(b.miss) !== -1;
+      return '<button class="fchip' + (on ? ' on' : '') + '" data-act="missLevel"'
+        + ' data-val="' + b.miss + '">' + esc(missLabel(b.miss)) + '（' + b.items.length + '）</button>';
+    }).join('') + '</div>';
+  }
+
+  /* 当前选中档位下能显示多少款（「能做」Tab 的角标用；没有 buckets 时退回 ready+near） */
+  function makeableTotal(state) {
+    var buckets = (state || {}).missBuckets;
+    if (!buckets || !buckets.length) {
+      return ((state || {}).ready || []).length + ((state || {}).near || []).length;
+    }
+    var depth = (state || {}).missDepth || [0, 1];
+    return buckets.reduce(function (sum, b) {
+      return depth.indexOf(b.miss) !== -1 ? sum + b.items.length : sum;
+    }, 0);
+  }
+
+  function makeableHtml(ready, near, tagsApi, pantry, opts) {
+    opts = opts || {};
     var have = (pantry || []).join('、');
     var head = '<div class="box-panel"><h3>能做的酒</h3>'
-      + '<p class="rulenote">仅展示「材料齐全」或只差 1 样材料的配方；缺 2 样及以上的不会在此显示</p>';
+      + '<p class="rulenote">按你录入的材料，列出还差 0 到 3 样的配方；上下方的档位可以自己开合</p>';
     // 新版酒柜布局把这个板块常驻成 Tab，没有材料时也得给个说法
     if (!have) {
       return head + '<p class="hint">先录入家里现有的材料，就能看到现在立刻能做出来的酒。</p></div>';
     }
+    // 老调用只给 ready / near 两个参数时，就地凑成「齐全 + 还差 1 样」两档
+    var buckets = opts.buckets && opts.buckets.length ? opts.buckets : [
+      { miss: 0, items: ready || [] },
+      { miss: 1, items: near || [] }
+    ];
+    var depth = opts.depth && opts.depth.length ? opts.depth : [0, 1];
+    var total = buckets.reduce(function (s, b) { return s + b.items.length; }, 0);
     // 一款都做不了时要说清楚，否则用户会以为点了「＋」没反应
-    if (!ready.length && !near.length) {
+    if (!total) {
       return head
         + '<p class="hint">按「' + esc(have) + '」暂时没有能做的酒。'
-        + '这里只列「材料齐全」和「还差 1 样」的配方，差 2 样以上的不会出现；'
+        + '这里最多列到还差 3 样的配方，差得更多的不会出现；'
         + '再补几样基酒 / 糖浆 / 柠檬汁之类，结果就有了。</p></div>';
     }
-    return head
-      + (ready.length
-        ? makeableGroupHtml('材料齐全', ready, tagsApi)
-        : '<div class="fgroup-label">材料齐全（0）</div>'
-          + '<p class="hint">手上的材料还凑不齐任何一款，先看下面「还差 1 样」的。</p>')
-      + makeableGroupHtml('还差 1 样', near, tagsApi)
-      + '</div>';
+    var body = '';
+    buckets.forEach(function (b) {
+      if (depth.indexOf(b.miss) === -1) return;
+      if (b.miss === 0 && !b.items.length) {
+        // 齐全的档位即使 0 款也显式说明，避免用户以为列表坏了
+        body += '<div class="fgroup-label">材料齐全（0）</div>'
+          + '<p class="hint">手上的材料还凑不齐任何一款，把上面的档位打开看看。</p>';
+        return;
+      }
+      body += makeableGroupHtml(missLabel(b.miss), b.items, tagsApi);
+    });
+    if (!body) {
+      body = '<p class="hint">当前没有勾选任何档位，点上面的档位按钮挑一个就能看到酒单。</p>';
+    }
+    return head + missChipsHtml(buckets, depth) + body + '</div>';
   }
 
   /* ---- 我的酒柜 ---- */
@@ -496,8 +541,7 @@
     var tab = profileTabOf(state);
     return profileTabBtnHtml('cabinet', '酒柜', (state.cabinet || []).length, tab)
       + profileTabBtnHtml('rated', '喝过', (state.rated || []).length, tab)
-      + profileTabBtnHtml('makeable', '能做',
-        (state.ready || []).length + (state.near || []).length, tab);
+      + profileTabBtnHtml('makeable', '能做', makeableTotal(state), tab);
   }
 
   /* 中部可滑动列表：按当前 Tab 复用 classic 布局的三个 builder */
@@ -511,7 +555,11 @@
         text: '还没有评价过的酒。在详情页点星星打分，这里会按星级排好'
       });
     }
-    if (tab === 'makeable') return makeableHtml(state.ready || [], state.near || [], tagsApi, pantry);
+    if (tab === 'makeable') {
+      return makeableHtml(state.ready || [], state.near || [], tagsApi, pantry, {
+        buckets: state.missBuckets, depth: state.missDepth
+      });
+    }
     return cabinetListHtml(state.cabinet || [], tagsApi);
   }
 
@@ -715,6 +763,7 @@
     filterBarHtml: filterBarHtml,
     filterPanelHtml: filterPanelHtml,
     searchHistoryHtml: searchHistoryHtml,
+    searchHistoryInner: searchHistoryInner,
     listFooterHtml: listFooterHtml,
     rateStarsHtml: rateStarsHtml,
     pantrySheetHtml: pantrySheetHtml,

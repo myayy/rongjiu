@@ -217,6 +217,31 @@
     return { ready: ready, near: near };
   }
 
+  /* 把「还差几样」摊成 0~maxMiss 的若干档（酒柜页的缺料筛选条用）：
+     miss 0 = 材料齐全；miss n = 还差 n 样，最多到 maxMiss，差得更多的直接不出现。
+     判定与 pantryGroups 同一条：冰 / 水不算缺；「差 N 样」同样要求配方里
+     至少有一样是我手上有的，否则单材料配方会把整档占满。
+     items 里的 missing：差 1 样给材料名（跟 pantryGroups 的 near 一致），
+     差 2 样以上给「2 样 · 伏特加、养乐多」这样的摘要。 */
+  function pantryBuckets(list, pantry, maxMiss) {
+    var have = (pantry || []).filter(function (n) { return typeof n === 'string' && n; });
+    var top = maxMiss == null ? 1 : maxMiss;
+    var buckets = [];
+    for (var k = 0; k <= top; k++) buckets.push({ miss: k, items: [] });
+    (list || []).forEach(function (d) {
+      var miss = pantryMissing(d, have);
+      if (miss === null) return;          // 只有冰/水，不参与统计
+      if (miss.length > top) return;      // 差太多，不在筛选范围里
+      if (miss.length === 0) { buckets[0].items.push({ drink: d, missing: null }); return; }
+      if (!usedAny(d, have)) return;      // 跟我手上的材料毫不相干，别推
+      buckets[miss.length].items.push({
+        drink: d,
+        missing: miss.length === 1 ? miss[0] : miss.length + ' 样 · ' + miss.join('、')
+      });
+    });
+    return buckets;
+  }
+
   /* ---------- 价格估算（元/杯）：同组取最高，跨组累加 ---------- */
   var PRICE_RULES = [
     { group: 'vodka', cost: 15, re: /伏特加|\bvodka\b/i },
@@ -554,6 +579,7 @@
     pantryMissing: pantryMissing,
     pantryFlags: pantryFlags,
     pantryGroups: pantryGroups,
+    pantryBuckets: pantryBuckets,
     estimatePrice: estimatePrice,
     categoryLabel: categoryLabel,
     glassLabel: glassLabel,

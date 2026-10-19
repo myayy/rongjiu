@@ -1,7 +1,7 @@
 # 融酒 · 项目开发依据（PRO）
 
 > 本文档记录已经与用户确认的需求与决策，作为后续开发的唯一依据。
-> 最后更新：2026-10-07
+> 最后更新：2026-10-19
 
 ---
 
@@ -59,7 +59,7 @@
   - **已喝过标记**：打过星的酒，卡片上显示「已喝过 ★N」
 - **酒柜页**：我的材料 → 能做的酒 → 我的酒柜 → 喝过的酒 → **浏览历史入口**
   - **我的材料**：录入家里现有的配料，按名字**双向包含**匹配（录「朗姆酒」能命中「白朗姆酒」）；冰块与水不算缺料。支持**一次填多个**（用 `/`、`、`、逗号或空格分隔，如「朗姆酒 / 可乐 / 青柠汁」）、**英文名自动转中文**（vodka → 伏特加）、带单位也能识别（30毫升朗姆酒 → 朗姆酒）；输入框下方常驻**常见材料建议区**（点一下直接加），打字时按关键词实时过滤
-  - **能做的酒**：分「材料齐全」「还差 1 样」两组，并标出缺的那样（每组最多列 20 款）
+  - **能做的酒**：按**缺料档位**分组 —— 「材料齐全 / 还差 1 样 / 还差 2 样 / 还差 3 样」，顶部一排档位胶囊可任意开合（默认只开「齐全 + 还差 1 样」，至少保留一档）；缺的那样会标在卡片上；**每组全量列出，不再截前 20 款**
   - **喝过的酒**：按星级降序，可改星、可取消
   - **浏览历史入口**：一个按钮，显示条数，点击进独立页面（见下）
 - **浏览历史页**（`#/history`，从酒柜页进入）：打开过的酒按时间倒序，每条显示「2026年10月08日 21点30分」，可单条删除 ✕，也可一键「清空历史」；最多存 100 条，空态有「去逛逛」引导
@@ -89,10 +89,12 @@
 
 ```
 素材/
-├─ index.zh.json        ← 【开发直接用这个】中文版，1341 条（已跨源去重）
+├─ index.zh.json        ← 【开发直接用这个】中文版，1406 条（已跨源去重）
 ├─ index.json           ← 英文原版
 ├─ thecocktaildb/       ← 628 配方 + 627 张实拍图
 ├─ opendrinks/          ← 756 配方 + 730 张图
+├─ cn/                  ← 36 张中国饮料兑酒配图
+├─ xhs/                 ← 65 张小红书便利店调酒配图（xhs-01~28 第一批、xhs-29~65 第二批）
 └─ 翻译/                ← 翻译中间文件（input 批次 / output 译文）
 ```
 
@@ -100,10 +102,10 @@
 
 | 项目 | 数量 |
 | --- | --- |
-| 配方总数 | **1341** 条（主库 1305 + 兑酒专区 36） |
-| 带图配方 | 1340 条 |
-| 不同酒名 | 1341 个（已跨源去重，与配方总数一致） |
-| 素材总体积 | 约 74 MB |
+| 配方总数 | **1406** 条（`tcdb-` 628 + `od-` 666 + `cn-` 36 + `dy-` 11 + `xhs-` 65） |
+| 带图配方 | 1398 条 |
+| 不同酒名 | 1384 个（同名不同做法的条目刻意保留） |
+| 素材总体积 | 约 79 MB |
 
 ### 5.3 `index.zh.json` 字段结构
 
@@ -111,10 +113,10 @@
 
 | 字段 | 说明 |
 | --- | --- |
-| `id` | 唯一标识（`tcdb-数字` / `od-xxx` / `dy-grx-数字` / `cn-数字`；自制配方为 `my-` 前缀） |
+| `id` | 唯一标识（`tcdb-数字` / `od-xxx` / `dy-grx-数字` / `cn-数字` / `xhs-数字`；自制配方为 `my-` 前缀） |
 | `name` | 英文原名 |
 | `name_zh` | 中文名 |
-| `name_display` | **展示名，格式「中文（English）」** |
+| `name_display` | **展示名，格式「中文（English）」**（`xhs-` 条目只有中文名，不强求括号英文） |
 | `category` / `alcoholic` / `glass` | 分类 / 是否含酒精 / 杯型 |
 | `ingredients_en` / `ingredients_zh` | 英文 / 中文配料 |
 | `instructions_en` / `instructions_zh` | 英文 / 中文做法 |
@@ -126,7 +128,7 @@
 
 - **跨源同名去重**：`od-` 与 `tcdb-` 有 90 组完全同名的配方（同一款酒的两种写法），保留分类与杯型更规范的 `tcdb-` 侧，删除 `od-` 重复条目（1431 → 1341）。
 - **`alcoholic` 字段补齐**：`od-` 源的 416 条原本缺该字段，会让卡片一律显示「含酒精」、却又无法被「含酒精」筛选命中（自相矛盾）。现按配料关键词推断：配料含任一基酒（伏特加 / 金酒 / 朗姆 / 威士忌 / 龙舌兰 / 白兰地 / 清酒 / 葡萄酒 / 利口酒 / 苦精 …）判「含酒精」；名称含 Virgin / Mocktail / 无酒精 的一律判「无酒精」；Ginger Ale、Root Beer 等软饮不计入。
-- 清洗后酒精分布：含酒精 **1061** + 无酒精 **271** + 可选含酒精 **9** = 1341，**无空值**。
+- 清洗后酒精分布：含酒精 **1126** + 无酒精 **271** + 可选含酒精 **9** = 1406，**无空值**。
 
 **类目 / 杯型中文化**：数据里的 `category`、`glass` 多为英文，且 `od-` 源的 `category` 混入了基酒名与口味词（共 265 种取值）。`js/tags.js` 的 `CATEGORY_MAP` / `GLASS_MAP` 负责映射为中文，未命中的保留原文；`alcoholLabel()` 统一「含酒精 / 无酒精 / 可选含酒精」文案。
 
@@ -235,7 +237,7 @@
 - 备份（导出 / 导入）包含全部七个键；`replace` 全量替换，`merge` 时材料取并集、评分浅合并、历史同款取时间较新的。
 - 浏览历史的时间展示格式：`2026年10月08日 21点30分`（`core.formatStamp`）。
 - 旧备份（只有 `cabinet` / `custom` / `settings`）仍可导入，不强制要求新字段。
-- 「我的材料」匹配逻辑在 `js/tags.js`：`ingMatches`（**单向**：配方材料包含你填的词才算命中）/ `pantryMissing` / `pantryGroups`；冰块与水（`ING_STOP`）永远不算缺料。
+- 「我的材料」匹配逻辑在 `js/tags.js`：`ingMatches`（**单向**：配方材料包含你填的词才算命中）/ `pantryMissing` / `pantryGroups`（旧的两组形状，仍被测试引用）/ `pantryBuckets`（**「能做的酒」现在用的**：摊出缺料 0~3 档，按 maxMiss 上限截断）；冰块与水（`ING_STOP`）永远不算缺料。
 
 ---
 
@@ -328,3 +330,7 @@
 | 2026-10-12 | **下线经典酒柜布局，酒柜页只保留「抖音『我』页」范式（按用户要求「把经典删了」）**。① **删除夹层切换入口**——`index.html` 去掉 `.switchbar` 与 `#btnLayout`，`css` 删掉 `.switchbar` / `.layout-btn` 整套规则（含金色选中态的 `.on` 分支），`app.js` 删掉 `syncLayoutBtn()`、`bindEvents()` 里的 `btnLayout` 监听、`start()` 里的读取与同步、`case 'toggleCabinetLayout'` 分支以及 `state.cabinetLayout` 字段。② **删除经典布局本体**——`ui.js` 删掉 `cabinetHtml()`（我的材料 → 能做的酒 → 我的酒柜 → 喝过的酒 的单列纵向拼装）与仅供它使用的 `pantryPanelHtml()`，并同步移除这两个导出；材料面板只剩 `pantrySheetHtml()`（底部弹层形态）。③ **`renderCabinet()` 去掉分派**——不再按 `state.cabinetLayout` 二选一，固定输出 `ui.cabinetProfileHtml()`；「切 Tab 只换中部列表」的 `renderCabinetTab()` 照旧。④ **清理偏好残留**——`store` 删除 `getCabinetLayout` / `setCabinetLayout`；`getSettings()` 在读盘时顺手 `delete` 掉旧版本留下的 `cabinetLayout` 键并写回，避免这个无用字段跟着导出备份到处跑（不影响 `priceTiers` 等其它设置项）。⑤ **测试调整**——`tests/phase17.test.js` 由「双布局」改写为「单一布局」规范（新断言：`ui` 不再导出 `cabinetHtml`/`pantryPanelHtml`、`index.html` 无 `btnLayout`/`switchbar`/`layout-btn`、`store` 无布局 API 且旧键读时被清掉、旧动作 `toggleCabinetLayout` 不再改状态、页面结构/三 Tab/空态/切 Tab 局部更新/材料弹层与关闭按钮全部保留）；`phase9` / `phase12` / `phase13` / `phase14` / `phase15` 里依赖「材料面板内嵌在酒柜页」与「酒柜页直出喝过的酒」的用例，改为先 `openPantry` 拉弹层、或切到对应 Tab 再断言（`UI.cabinetHtml` 直出的用例改为直接调 `UI.makeableHtml`）。全套 **231/231** 通过。`sw.js` 缓存版本升为 `rongjiu-v7`。 |
 | 2026-10-12 | **发布 1.1.0 版本并补齐仓库内容**（按用户要求「把文件夹的东西更新到 GitHub 并更新软件版本」）。① **版本号**：`package.json` 与 `package-lock.json`（根包两处）由 `1.0.0` 升为 **`1.1.0`**；`sw.js` 缓存版本由 `rongjiu-v7` 升为 **`rongjiu-v8`**（PWA 侧「软件版本」的实际抓手，旧缓存于 activate 阶段清掉）；Android 工程 `versionCode 1→2`、`versionName "1.0"→"1.1.0"`（`android/` 在 `.gitignore` 内、未纳入仓库，仅本地生效，供下次打包用）。② **补齐未跟踪内容**：`.trae/documents/` 4 份方案文档（推荐页交互改造 / 浏览历史与兑酒照片 / 酒柜材料库与兑酒专区 / 酒柜布局双模式）、`.arts/settings.json`、`素材/xhs/` 21 张小红书素材图（1.05 MB，与既有 `素材/` 2844 个配方图同目录风格）。③ **README 纠正**：开头的视觉描述仍是已下线的「吧台酒单 + 浅色/暗色双主题」，改为当前的「暗黑星空 + 水晶材质、单一暗色主题」。④ **推送通道**——`github.com:443` 直连被 RST（`curl 55`）、SSH 公钥未在账号登记，最终发现系统代理填的是 `127.0.0.1:7897`（Clash Verge）但客户端未启动；启动 `F:\clash\Clash Verge\clash-verge.exe` 后以 `git -c http.proxy=http://127.0.0.1:7897` 推送成功。推送 `cba41d4` 与本次版本提交，并打 tag **`v1.1.0`**。 |
 | 2026-10-12 | **打包 1.1.0 APK 并发布 GitHub Release**（按用户要求「先帮我打包 APK 再发布 Release」）。① **构建**——`npm run apk`（`JAVA_HOME=F:\android-dev\jdk21`，SDK 走 `android/local.properties` 的 `F:/android-dev/android-sdk`）：生成 `www`（79.7 MB）→ `cap sync` → `gradlew assembleDebug`，产物 `android/app/build/outputs/apk/debug/app-debug.apk`（80 MB）。② **发布**——上传为资产 `rongjiu-v1.1-debug.apk`，`gh release create v1.1.0 --title "融酒 v1.1.0" --verify-tag`，说明沿用 v1.0.0 的行文并补「本次更新」清单；Release 页 https://github.com/myayy/rongjiu/releases/tag/v1.1.0 。③ **README 更新**——下载入口由 v1.0.0 换为 v1.1.0（含体积 80 MB 与 `versionCode 2`）。④ **发布通道踩坑记录**——`gh auth login --web` 设备码流程连续两次未能完成（用户侧卡在 GitHub 的 sudo 二次确认与 GitHub Mobile 双设备验证，`hosts.yml` 始终未生成，`gh` 进程一直空转），最终改用 **classic PAT**（仅 `repo` 权限，经 `GH_TOKEN` 环境变量一次性使用，未落盘）：`gh auth status` 提示缺 `read:org` 属无关告警，`gh release create` 用 `repo` 权限即可。全程需 `HTTPS_PROXY=http://127.0.0.1:7897`（Clash Verge）——`github.com:443` 直连会被 RST。 |
+| 2026-10-19 | **「能做的酒」缺料档位筛选 + 全量显示 + 主按钮改水晶质感**（按用户三条要求）。① **缺料档位**——原来只列「齐全 / 还差 1 样」，只录一样材料时差 2~3 样的酒完全不出现；新增 `tags.pantryBuckets(list, pantry, maxMiss)`（摊出缺料 0~3 档，保留 `pantryGroups` 不动以免破坏既有用例），`ui.makeableHtml` 顶部加一排档位胶囊（`data-act="missLevel"`）可任意开合，`app` 新增 `state.missDepth`（默认 `[0,1]`，至少保留一档）与 `handleAction` 的 `missLevel` 分支。举证：只录「苏打水」时 `cn-006 养乐多伏特加`（伏特加 + 养乐多 + 苏打水）落在「还差 2 样」，补上「养乐多」后升到「还差 1 样」。② **全量显示**——删掉每组「最多列 20 款」的截断与「仅显示前 20 款」提示，改为整组全量渲染（新增用例用 26 条数据断言卡片 26 张全出）。③ **视觉**——把「金色实底」主按钮（截图里的 `＋ 加入酒柜`）整套换成「**水晶玻璃 + 发光折射边框**」（新增 `--crystal-ink/line/grad/grad-hi/inset/glow/text` 变量，只靠边缘的光、不铺色块），同步改 `.ftab i`/`.opt.on`/`.fp-done`/`.fchip.on`/`.box-count`/`.fab`/`.tab.active`/`.profile-tab.on`/`.exact-toggle.on`/`.ps-num` 等选中态；仅**评分星星**（`.star`/`.star.on`）保留金色作为「已评」语义色。新增 `tests/phase18.test.js`（10 例），`phase15` 的规则说明断言随文案更新，全套 **241/241** 通过；`sw.js` 缓存版本升为 `rongjiu-v9`。 |
+| 2026-10-19 | **第二批社媒采集入库（小红书，37 条）**（按用户要求「从小红书更新数据库，不要重复，图片要保留」）。① **采集**——MediaCrawler 关键词取命中率最高的两个「便利店调酒」「自制鸡尾酒」各 20 条（共 40 篇，其中 5 篇在两词下重复 → 35 篇唯一），限速保持 10s/并发 1/不采评论；登录态走 CDP（端口 9222）扫码。② **抽取与去重**——笔记正文共抽出 130 条候选，先按酒名 / 配料对全库 1369 条做去重筛到 66 条，人工复核保留 50 条；再剔除某篇「整篇只有基酒瓶＋饮料公式卡、无成品杯照」的 13 条，**最终入库 37 条**（`xhs-29` ~ `xhs-65`，类别「便利店调酒」，仅中文名）。③ **配图**——从笔记九宫格 / 单杯配方卡裁切 37 张干净成品图（无 `=` 号、无平台 UI、无相邻说明框），分两轮裁切（第二轮带「裁切→回看→调坐标」自校验闭环），存入 `素材/xhs/`，`image` 指向 `素材/xhs/xhs-NN.jpg`。④ **清洗**——新配方做法文案里的 11 处「适量」按全库约定改写（`加冰块适量`→`加冰块至满杯`、`适量蜂蜜`→`蜂蜜少许`）。⑤ **落地**——`素材/index.zh.json` 1369 → **1406**（带图 1361 → **1398**），重跑 `tools/gen-data.js` 无缺图；入库脚本 `_tmp/ingest-xhs2.py`（`_tmp/` 不进仓库）。⑥ **测试与缓存**——`phase1` / `phase7` / `phase15` 的计数类断言随数据更新，全套 **241/241** 通过；`sw.js` 缓存版本升为 `rongjiu-v10`。 |
+| 2026-10-19 | **全功能程序化走查（117 项）+ 修复「搜索历史行在有词时残留」缺陷**（按用户要求「验证每个功能，保证功能完善，全部运行一遍」）。① **走查**——`_tmp/verify-all.js`（`_tmp/` 不进仓库）用项目自带假 DOM 驱动真实 `app/ui/core/tags/store` 代码路径，覆盖推荐页货架 / 搜索与筛选 / 详情页 / 酒柜页 / 设置·自制·导入导出 / 盲盒 / 全局·数据·PWA 共 **117 项**，全部 PASS；浏览器专属项（控制台报错、响应式）经真实浏览器实测：推荐 / 酒柜 / 盲盒三页在 390×844 下无重叠溢出、控制台无 error。② **缺陷修复**——复验中定位真实缺陷：打字时 `refreshListOnly()` 只替换列表、不重建筛选条，导致「最近搜索」胶囊行在**有查询词时仍残留且内容陈旧**（与 `filterHostHtml` 的设计意图相反）。改法：`ui` 拆出 `searchHistoryInner`，`#searchHistory` 外层常驻、仅内层随查询词清空，`refreshListOnly()` 与回车记历史两处**就地**更新该行，CSS 补 `.hist-row:empty { display: none }` 收起空行——既保住输入框焦点，又让历史行正确显隐。③ **回归与缓存**——全套 **241/241** 通过，`sw.js` 缓存版本升为 `rongjiu-v11`，`npm run www` 重建 **80.7 MB**。 |
+| 2026-10-19 | **发布 1.2.0：更换应用图标（白底原图照搬）+ 版本升级 + 打包 APK 并发布 Release**（按用户要求「帮我发布 github 并把软件的图标换成这个」）。① **图标**——以设计原图（1186×1307，白底金色线稿马天尼杯）为素材：先自动求「笔迹包围盒」（逐行/逐列统计非白像素，阈值 ≥4 以剔除右下角孤立噪点），再以包围盒中心对齐铺进白底方图（内容高度占 **68%**，全部内容落在方图内切圆之内，贴近 maskable 安全区），LANCZOS 输出 `icons/icon-512.png` / `icons/icon-192.png` / `icons/apple-touch-icon.png`，方图底稿固化为 **`icons/icon-source.png`**；Android 侧同步重做全套 mipmap——`ic_launcher.png`（圆角方）、`ic_launcher_round.png`（圆形，圆角外透明）、`ic_launcher_foreground.png`（按自适应图标规范把内容压进 72dp 可见圆，即内容高度 = 0.53×108dp），`ic_launcher_background` 保持 `#FFFFFF`。② **`tools/make-icons.js` 重写**——原脚本是「程序化绘制品牌渐变底 + 白杯」的旧设计，换图后一旦跑 `npm run icons` 会把图标打回旧样子；改为**零依赖解码** `icons/icon-source.png`（手写 PNG 解码：IHDR/IDAT/IEND + 灰度/RGB/RGBA + 5 种滤镜）后**面积平均**缩放到 512 / 192 / 180，保证脚本与新图标永远同源（实测重跑输出与 PIL 产物 512 尺寸像素级一致）。③ **版本号**——`package.json` 与 `package-lock.json`（根包两处）由 `1.1.0` 升为 **`1.2.0`**；`sw.js` 缓存版本 `rongjiu-v11` → **`rongjiu-v12`**；Android 工程 `versionCode 2→3`、`versionName "1.1.0"→"1.2.0"`。④ **纠正过期描述**——`index.html` 与 `manifest.webmanifest` 里的「**1341** 条配方」实为 **1406** 条，一并更正。⑤ **回归与构建**——`npm test` **241/241** 通过；`npm run www` 重建 **80.8 MB**；`npm run apk`（`JAVA_HOME=F:\android-dev\jdk21`）产物 `app-debug.apk` 85,058,154 字节（≈ **81 MB**）。⑥ **发布**——提交推送 main（走代理 `127.0.0.1:7897`）、打 tag **`v1.2.0`**，`gh release create v1.2.0` 上传资产 `rongjiu-v1.2-debug.apk`，README 下载入口换成 v1.2.0（体积 81 MB、`versionCode 3`）。 |

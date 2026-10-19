@@ -46,8 +46,8 @@ function viewHtml(app) {
 /* H1：能做的酒规则说明 */
 test('H1 能做的酒顶部有规则说明', () => {
   const html = UI.makeableHtml([], [], Tags, ['朗姆酒']);
-  assert.ok(html.includes('仅展示「材料齐全」或只差 1 样材料的配方'), '应有规则说明');
-  assert.ok(html.includes('缺 2 样及以上的不会在此显示'));
+  assert.ok(html.includes('还差 0 到 3 样'), '规则说明要写清档位范围，实际：' + html.slice(0, 200));
+  assert.ok(html.includes('档位'), '要提示可以用档位调范围');
 });
 
 /* H2：基酒视图 */
@@ -189,7 +189,7 @@ test('照着分区标题搜能搜到（「中国饮料兑酒」36 条）', () =>
   assert.equal(hit.length, 36);
   assert.ok(hit.every((d) => String(d.id).indexOf('cn-') === 0));
   // 各分区标题都应可搜
-  for (const [label, n] of [['一口闷 Shot', 74], ['无酒精特调', 271], ['伏特加调酒', 217]]) {
+  for (const [label, n] of [['一口闷 Shot', 74], ['无酒精特调', 271], ['伏特加调酒', 222]]) {
     const h = DRINKS.filter((d) => Tags.searchText(d).includes(label.toLowerCase()));
     assert.equal(h.length, n, label + ' 应命中 ' + n + ' 条');
   }

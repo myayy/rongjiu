@@ -6,6 +6,7 @@
   var PAGE_SIZE = 30;          // 每批加载条数
   var BOTTOM_THRESHOLD = 240;  // 距底部多少像素算「快到底」
   var ING_CHIPS = 60;          // 推荐页材料筛选胶囊个数
+  var MISS_MAX = 3;            // 「能做的酒」最多列到还差几样（档位 0~3）
 
   function createApp(deps) {
     var doc = deps.doc;
@@ -39,6 +40,7 @@
       recipeDraft: null,
       share: null,          // 详情页「分享」弹层的配方 id
       cabinetTab: 'cabinet',// 酒柜页中部当前 Tab：cabinet / rated / makeable
+      missDepth: [0, 1],    // 「能做的酒」勾选的缺料档位：0=齐全，1~3=还差几样
       overlay: null,
       confirm: null,        // 应用内确认弹层的文案与「确定」回调
       pool: []
@@ -199,10 +201,12 @@
     /* 筛选条外层：搜索胶囊 + 筛选 tab 行（点 tab 拉起筛选面板）。
       两种形态共用同一段 DOM，只为后面「打字不重建搜索框」留出切换余地。 */
     function filterHostHtml() {
-      var hist = (!state.q && !state.exact) ? ui.searchHistoryHtml(store.getSearchHistory()) : '';
+      // #searchHistory 常驻，仅内层按「无查询词」条件填充：
+      // 让打字时的局部刷新（refreshListOnly）也能就地收起/展开这一行，不必重建搜索框
+      var hist = (!state.q && !state.exact) ? ui.searchHistoryInner(store.getSearchHistory()) : '';
       return '<div id="filterHost" class="filter-host">'
         + ui.filterBarHtml(currentFilters())
-        + hist
+        + '<div id="searchHistory" class="hist-row">' + hist + '</div>'
         + '</div>';
     }
 
@@ -297,6 +301,9 @@
       // 空查询要落回货架首页，那是另一种形态，交给整页渲染
       if (!currentSec() && !hasFilter()) return false;
       host.className = 'filter-host';
+      // 「最近搜索」这一行的显隐随查询词走：有词就收起，清空再展开（就地换内层，保住输入框焦点）
+      var hb = doc.getElementById('searchHistory');
+      if (hb) hb.innerHTML = (state.q || state.exact) ? '' : ui.searchHistoryInner(store.getSearchHistory());
       var parts = recommendParts();
       state.lastTotal = parts.total;
       wrap.innerHTML = listRegionHtml(parts);
@@ -393,9 +400,9 @@
         var enter = e.key === 'Enter' || e.keyCode === 13;
         if (enter && state.q && state.q.trim()) {
           try { store.pushSearchHistory(state.q); } catch (err) { /* 记不上没关系 */ }
-          // 回车后仍停在推荐页，刷新历史胶囊（不重渲染以免丢焦点，靠 historyRefresh）
+          // 回车后仍停在推荐页，刷新历史胶囊（不重渲染以免丢焦点；外层 #searchHistory 就地换内层）
           var hb = doc.getElementById('searchHistory');
-          if (hb) hb.innerHTML = ui.searchHistoryHtml(store.getSearchHistory());
+          if (hb) hb.innerHTML = ui.searchHistoryInner(store.getSearchHistory());
         }
       });
     }
@@ -476,7 +483,8 @@
       var ids = store.getCabinet();
       var cabinet = ids.map(function (id) { return store.findRecipe(id); }).filter(Boolean);
       var pantry = store.getPantry();
-      var groups = pantry.length ? tags.pantryGroups(store.allRecipes(), pantry) : { ready: [], near: [] };
+      // 缺料档位摊到「还差 3 样」为止：只录了一样材料时，也能看到还差 2~3 样的酒
+      var buckets = pantry.length ? tags.pantryBuckets(store.allRecipes(), pantry, MISS_MAX) : [];
       var ratings = store.getRatings();
       var rated = Object.keys(ratings).map(function (id) {
         return { drink: store.findRecipe(id), rating: ratings[id] };
@@ -491,8 +499,10 @@
         pantry: pantry,
         pantryDraft: state.pantryDraft,
         pantrySuggest: pantrySuggestNames(),
-        ready: groups.ready,
-        near: groups.near,
+        ready: buckets.length ? buckets[0].items : [],
+        near: buckets.length ? buckets[1].items : [],
+        missBuckets: buckets,
+        missDepth: state.missDepth,
         cabinet: cabinet,
         rated: rated,
         history: history,
@@ -1025,6 +1035,18 @@
           state.cabinetTab = el.getAttribute('data-val') || 'cabinet';
           renderCabinetTab();
           break;
+        case 'missLevel': {
+          // 「能做的酒」的缺料档位：点一下开 / 关，至少留一档
+          var lv = parseInt(el.getAttribute('data-val'), 10);
+          if (isNaN(lv)) break;
+          var cur = state.missDepth || (state.missDepth = [0, 1]);
+          var at = cur.indexOf(lv);
+          if (at === -1) cur.push(lv); else cur.splice(at, 1);
+          cur.sort(function (a, b) { return a - b; });
+          if (!cur.length) { cur.push(0); toast('至少保留一个档位'); }
+          renderCabinetTab();
+          break;
+        }
         case 'delHistory':
           store.removeHistory(el.getAttribute('data-val'));
           render();

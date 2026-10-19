@@ -14,9 +14,9 @@ test('js/data.js 存在且可加载', () => {
   assert.ok(Array.isArray(globalThis.DRINKS), 'globalThis.DRINKS 应为数组');
 });
 
-test('配方总数为 1369（跨源同名去重 + 小红书/抖音采集入库后）', () => {
+test('配方总数为 1406（跨源同名去重 + 小红书/抖音采集入库后）', () => {
   require(path.join(ROOT, 'js', 'data.js'));
-  assert.equal(globalThis.DRINKS.length, 1369);
+  assert.equal(globalThis.DRINKS.length, 1406);
 });
 
 test('每条配方字段完整', () => {

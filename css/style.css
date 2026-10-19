@@ -2,7 +2,8 @@
    融酒 · 暗黑星空（单一主题）
    设计基调：深黑 / 藏蓝 / 暗紫的夜空，缀以星点、星云与光晕；
    星星与按钮走「水晶材质」——透明蓝色水晶用于次级控件，
-   金色水晶用于主行动按钮。光影走同一条物理逻辑：
+   主行动按钮走「水晶玻璃 + 发光折射边框」（只靠边缘的光，不铺色块，
+   免得跟夜空背景打架）。光影走同一条物理逻辑：
    左上高光 → 材质本色 → 右下暗部，边缘留一道折射亮边。
    全部功能逻辑不变，仅视觉替换。
    ============================================================ */
@@ -30,17 +31,21 @@
   --ice-inset: inset 0 1px 0 rgba(255, 255, 255, .55), inset 0 -1px 0 rgba(0, 18, 56, .4);
   --ice-glow: 0 2px 12px rgba(56, 116, 228, .34);
 
-  /* ---- 金色水晶：主行动 / 强调 ---- */
-  --gold-ink: #3f2a06;
-  --gold-line: rgba(255, 214, 120, .65);
-  --gold-grad:
-    linear-gradient(180deg, rgba(255, 255, 255, .50), rgba(255, 255, 255, .06) 46%, rgba(120, 70, 0, .16)),
-    linear-gradient(135deg, #ffe9a8, #f2b845 46%, #bd8118 100%);
-  --gold-grad-hi:
-    linear-gradient(180deg, rgba(255, 255, 255, .66), rgba(255, 255, 255, .12) 46%, rgba(120, 70, 0, .10)),
-    linear-gradient(135deg, #fff4cf, #ffc94f 46%, #cf8f1c 100%);
-  --gold-inset: inset 0 1px 0 rgba(255, 255, 255, .75), inset 0 -1px 1px rgba(120, 70, 0, .45);
-  --gold-glow: 0 3px 15px rgba(232, 172, 52, .46);
+  /* ---- 水晶玻璃：主行动 / 强调 ----
+     不再用金色实底（金色跟夜空背景不搭），改成「深色玻璃 + 发光折射边框」：
+     边缘一道亮白蓝的折射高光，外面再罩一层蓝色光晕，
+     像夜空里的一枚水晶按钮 —— 只靠光，不靠色块。 */
+  --crystal-ink: #f2f7ff;
+  --crystal-line: rgba(198, 228, 255, .8);
+  --crystal-grad:
+    linear-gradient(180deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, .03) 45%, rgba(0, 0, 0, .16)),
+    linear-gradient(135deg, rgba(120, 186, 255, .30), rgba(52, 100, 196, .26) 52%, rgba(16, 28, 68, .46));
+  --crystal-grad-hi:
+    linear-gradient(180deg, rgba(255, 255, 255, .32), rgba(255, 255, 255, .07) 45%, rgba(0, 0, 0, .12)),
+    linear-gradient(135deg, rgba(156, 210, 255, .44), rgba(74, 128, 228, .34) 52%, rgba(24, 42, 92, .52));
+  --crystal-inset: inset 0 1px 0 rgba(255, 255, 255, .70), inset 0 -1px 0 rgba(6, 16, 46, .55);
+  --crystal-glow: 0 0 16px rgba(96, 156, 255, .40), 0 6px 20px rgba(24, 52, 130, .45);
+  --crystal-text: 0 0 12px rgba(180, 220, 255, .55);
 
   /* ---- 语义色（同样水晶化）---- */
   --accent: #7fb2ff;
@@ -52,9 +57,6 @@
   --green-soft: rgba(60, 200, 150, .16);
   --red: #ff8093;
   --red-soft: rgba(255, 90, 110, .18);
-
-  /* ---- 星星：评分星的材质色由 .star 的两层渐变直接给出 ---- */
-  --star-on: #ffd76a;
 
   --scrollbar: rgba(124, 148, 226, .4);
   --toast-bg: rgba(10, 14, 30, .92);
@@ -205,9 +207,9 @@ html, body {
 }
 .tab-ico { font-size: 20px; line-height: 1; transition: transform .15s ease; }
 .tab.active {
-  color: #ffe6ad; font-weight: 700;
-  background: linear-gradient(180deg, rgba(255, 226, 150, .16), rgba(255, 190, 80, .08));
-  box-shadow: inset 0 0 0 1px rgba(255, 206, 110, .34), 0 0 16px rgba(230, 172, 60, .22);
+  color: #d9e8ff; font-weight: 700;
+  background: linear-gradient(180deg, rgba(150, 200, 255, .16), rgba(70, 120, 230, .08));
+  box-shadow: inset 0 0 0 1px rgba(160, 205, 255, .34), 0 0 16px rgba(96, 156, 255, .26);
 }
 .tab.active .tab-ico { transform: translateY(-1px) scale(1.08); }
 .tab:active { transform: scale(.94); }
@@ -301,8 +303,9 @@ html, body {
 .ftab:active { transform: scale(.95); }
 .ftab i {
   font-style: normal; font-size: 11px; line-height: 15px; padding: 0 6px;
-  border-radius: 999px; background: var(--gold-grad); color: var(--gold-ink);
-  font-weight: 800; box-shadow: var(--gold-inset);
+  border-radius: 999px; background: rgba(96, 140, 240, .26); color: #d6e6ff;
+  border: 1px solid var(--ice-line);
+  font-weight: 800;
 }
 .ftab-filter { margin-left: auto; color: var(--muted); }
 .ft-ico { font-size: 13px; }
@@ -338,8 +341,9 @@ html, body {
 .fp-nav-item.on { background: var(--bg); color: var(--accent); font-weight: 700; }
 .fp-nav-item i {
   font-style: normal; font-size: 11px; line-height: 15px; padding: 0 5px;
-  border-radius: 999px; background: var(--gold-grad); color: var(--gold-ink);
-  font-weight: 800; box-shadow: var(--gold-inset);
+  border-radius: 999px; background: rgba(96, 140, 240, .26); color: #d6e6ff;
+  border: 1px solid var(--ice-line);
+  font-weight: 800;
 }
 .fp-main { flex: 1 1 auto; min-width: 0; overflow-y: auto; padding: 16px 14px 24px; }
 .fp-main h3 { margin: 0 0 12px; font-size: 13px; font-weight: 700; color: var(--ink); }
@@ -351,12 +355,12 @@ html, body {
   box-shadow: var(--ice-inset);
 }
 .opt.on {
-  background: linear-gradient(180deg, rgba(255, 244, 208, .24), rgba(255, 200, 90, .12));
-  border-color: var(--gold-line); color: #ffe6ad; font-weight: 700;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 0 12px rgba(230, 172, 60, .3);
+  background: var(--crystal-grad);
+  border-color: var(--crystal-line); color: #fff; font-weight: 700;
+  box-shadow: var(--crystal-inset), 0 0 12px rgba(96, 156, 255, .38);
 }
 .opt:hover { background: var(--ice-grad-hi); }
-.opt.on:hover { background: linear-gradient(180deg, rgba(255, 244, 208, .34), rgba(255, 200, 90, .18)); }
+.opt.on:hover { background: var(--crystal-grad-hi); }
 .opt:active { transform: scale(.95); }
 .fp-foot {
   flex: 0 0 auto; display: flex; gap: 10px;
@@ -369,8 +373,8 @@ html, body {
 }
 .fp-reset { background: var(--ice-grad); border: 1px solid var(--ice-line); color: var(--ice-ink); box-shadow: var(--ice-inset); }
 .fp-reset:hover { background: var(--ice-grad-hi); }
-.fp-done { background: var(--gold-grad); border: 1px solid var(--gold-line); color: var(--gold-ink); font-weight: 800; box-shadow: var(--gold-inset), var(--gold-glow); }
-.fp-done:hover { background: var(--gold-grad-hi); }
+.fp-done { background: var(--crystal-grad); border: 1px solid var(--crystal-line); color: var(--crystal-ink); font-weight: 800; box-shadow: var(--crystal-inset), var(--crystal-glow); text-shadow: var(--crystal-text); }
+.fp-done:hover { background: var(--crystal-grad-hi); }
 .fp-reset:active, .fp-done:active { transform: scale(.97); }
 
 /* 独立描边输入框（酒柜「我的材料」等仍在用） */
@@ -395,10 +399,10 @@ html, body {
 }
 .fchip:hover { background: var(--ice-grad-hi); }
 .fchip.on {
-  background: var(--gold-grad); border-color: var(--gold-line); color: var(--gold-ink);
-  font-weight: 800; box-shadow: var(--gold-inset), var(--gold-glow);
+  background: var(--crystal-grad); border-color: var(--crystal-line); color: #fff;
+  font-weight: 800; box-shadow: var(--crystal-inset), 0 0 12px rgba(96, 156, 255, .36);
 }
-.fchip.on:hover { background: var(--gold-grad-hi); }
+.fchip.on:hover { background: var(--crystal-grad-hi); }
 .fchip:active { transform: scale(.94); }
 
 /* ---- 详情 ---- */
@@ -463,18 +467,19 @@ html, body {
 .back-btn:active { color: #fff; transform: scale(.95); }
 .kv { display: flex; gap: 6px; flex-wrap: wrap; }
 
-/* ---- 按钮：主按钮金色水晶 + 微缩放 ---- */
+/* ---- 按钮：主按钮走水晶玻璃 + 发光折射边（黄底换成靠光说话） ---- */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  border: 1px solid var(--gold-line); border-radius: 13px; padding: 12px 16px;
+  /* 外层光晕 + 内侧一圈亮边，框出「水晶切面」的折射感 */
+  border: 1px solid var(--crystal-line); border-radius: 13px; padding: 12px 16px;
   font-size: 15px; font-weight: 800; cursor: pointer;
-  background: var(--gold-grad); color: var(--gold-ink); width: 100%;
-  box-shadow: var(--gold-inset), var(--gold-glow);
+  background: var(--crystal-grad); color: var(--crystal-ink); width: 100%;
+  box-shadow: var(--crystal-inset), var(--crystal-glow);
   transition: var(--tap); letter-spacing: .5px;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, .35);
+  text-shadow: var(--crystal-text);
 }
-.btn:hover { background: var(--gold-grad-hi); }
-.btn:active { transform: scale(.97); box-shadow: var(--gold-inset), 0 1px 6px rgba(232, 172, 52, .3); filter: brightness(.96); }
+.btn:hover { background: var(--crystal-grad-hi); }
+.btn:active { transform: scale(.97); box-shadow: var(--crystal-inset), 0 1px 8px rgba(96, 156, 255, .3); filter: brightness(1.06); }
 .btn.ghost {
   background: var(--ice-grad); color: #cfe4ff; border: 1.5px solid var(--ice-line);
   box-shadow: var(--ice-inset);
@@ -514,8 +519,8 @@ html, body {
 @keyframes pop { from { transform: scale(.94); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .box-result .detail-hero img, .box-result .detail-hero .noimg { height: 240px; }
 .box-count {
-  font-size: 12px; color: #ffe6ad; background: linear-gradient(180deg, rgba(255, 244, 208, .18), rgba(255, 200, 90, .1));
-  border: 1px solid var(--gold-line);
+  font-size: 12px; color: #cfe2ff; background: rgba(96, 140, 240, .22);
+  border: 1px solid var(--ice-line);
   display: inline-block; padding: 5px 14px; border-radius: 999px;
   margin: 4px auto 12px; text-align: center; font-weight: 700;
 }
@@ -557,14 +562,14 @@ html, body {
 .fab {
   position: absolute; right: 16px; bottom: 78px; z-index: 20;
   width: 52px; height: 52px; border-radius: 50%;
-  background: var(--gold-grad); color: var(--gold-ink);
-  border: 1px solid var(--gold-line);
+  background: var(--crystal-grad); color: var(--crystal-ink);
+  border: 1px solid var(--crystal-line);
   font-size: 26px; line-height: 1; cursor: pointer;
-  box-shadow: var(--gold-inset), 0 6px 22px rgba(232, 172, 52, .5);
+  box-shadow: var(--crystal-inset), var(--crystal-glow); text-shadow: var(--crystal-text);
   transition: var(--tap);
 }
-.fab:hover { background: var(--gold-grad-hi); }
-.fab:active { transform: scale(.9); filter: brightness(.95); }
+.fab:hover { background: var(--crystal-grad-hi); }
+.fab:active { transform: scale(.9); filter: brightness(1.08); }
 
 /* ---- 弹层：底部抽屉 ---- */
 .overlay {
@@ -784,7 +789,7 @@ html, body {
 .profile-id-txt h2 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: .3px; }
 .profile-sub { margin: 3px 0 0; font-size: 11.5px; color: var(--muted); }
 
-/* 统计卡：数字走金色，标签走弱化灰 */
+/* 统计卡：数字走冰蓝发光，标签走弱化灰 */
 .profile-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 13px; }
 .profile-stat {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
@@ -793,7 +798,7 @@ html, body {
 }
 .ps-num {
   font-size: 18px; font-weight: 800; line-height: 1.2;
-  color: var(--star-on); text-shadow: 0 0 12px rgba(255, 200, 90, .45);
+  color: #dbeaff; text-shadow: 0 0 12px rgba(120, 180, 255, .5);
 }
 .ps-label { font-size: 11px; color: var(--muted); }
 
@@ -816,21 +821,23 @@ html, body {
   padding: 10px 2px 12px; font-size: 14px; color: var(--ink-soft);
   white-space: nowrap; transition: var(--tap);
 }
-.profile-tab.on { color: #ffe6ad; font-weight: 800; }
-/* 选中态：底部一道金色发光短线 */
+.profile-tab.on { color: #e2eeff; font-weight: 800; }
+/* 选中态：底部一道冰蓝发光短线 */
 .profile-tab.on::after {
   content: ""; position: absolute; left: 50%; bottom: -1px; transform: translateX(-50%);
   width: 30px; height: 3px; border-radius: 999px;
-  background: var(--gold-grad); box-shadow: 0 0 10px rgba(255, 200, 90, .8);
+  background: linear-gradient(90deg, rgba(150, 205, 255, .5), #cfe6ff, rgba(150, 205, 255, .5));
+  box-shadow: 0 0 10px rgba(140, 190, 255, .85);
 }
 .profile-tab:active { transform: scale(.96); }
-/* 角标只给选中项上金色，否则三个金疙瘩太吵 */
+/* 角标只给选中项上高光，否则三个亮点太吵 */
 .profile-tab-count {
   font-size: 11px; line-height: 15px; padding: 0 6px; border-radius: 999px;
   background: rgba(92, 122, 220, .2); color: var(--chip-ink); font-weight: 800;
 }
 .profile-tab.on .profile-tab-count {
-  background: var(--gold-grad); color: var(--gold-ink); box-shadow: var(--gold-inset);
+  background: rgba(120, 175, 255, .34); color: #eaf3ff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5);
 }
 .profile-body { min-height: 40px; }
 
@@ -857,8 +864,22 @@ html, body {
 .toast.hidden { display: none; }
 .hidden { display: none !important; }
 
-/* ---- 能做的酒：规则说明 ---- */
+/* ---- 能做的酒：规则说明 + 缺料档位筛选 ---- */
 .rulenote { font-size: 11px; color: var(--muted); margin: 2px 0 8px; line-height: 1.6; }
+/* 档位条：齐全 / 还差 1 样 / 2 样 / 3 样，勾中的走水晶高亮 */
+.miss-filter { margin: 0 0 2px; }
+/* 分组标题（材料齐全 / 还差 N 样）：左侧一道水晶竖条，代替以前的裸文字 */
+.fgroup-label {
+  position: relative; font-size: 12.5px; font-weight: 800; color: var(--ink);
+  margin: 15px 0 9px; padding-left: 10px; letter-spacing: .3px;
+}
+.fgroup-label::before {
+  content: ""; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 13px; border-radius: 2px;
+  background: linear-gradient(180deg, #d7e9ff, rgba(110, 170, 255, .6));
+  box-shadow: 0 0 8px rgba(120, 180, 255, .7);
+}
+.miss-filter + .fgroup-label { margin-top: 12px; }
 
 /* ---- 搜索：精确匹配开关 ---- */
 .exact-toggle {
@@ -870,15 +891,16 @@ html, body {
 .exact-toggle .exact-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(150, 180, 255, .5); transition: var(--tap); }
 .exact-toggle:hover { background: var(--ice-grad-hi); }
 .exact-toggle.on {
-  border-color: var(--gold-line); color: #ffe6ad;
-  background: linear-gradient(180deg, rgba(255, 244, 208, .2), rgba(255, 200, 90, .1));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 0 12px rgba(230, 172, 60, .28);
+  border-color: var(--crystal-line); color: #eaf3ff;
+  background: var(--crystal-grad);
+  box-shadow: var(--crystal-inset), 0 0 12px rgba(96, 156, 255, .34);
 }
-.exact-toggle.on .exact-dot { background: var(--star-on); box-shadow: 0 0 8px rgba(255, 210, 100, .8); }
+.exact-toggle.on .exact-dot { background: #cfe6ff; box-shadow: 0 0 8px rgba(160, 210, 255, .85); }
 .exact-toggle:active { transform: scale(.94); }
 
 /* ---- 搜索历史 ---- */
 .hist-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.hist-row:empty { display: none; }   /* 有查询词时内层被清空，整行随之收起 */
 .hist-label { font-size: 11px; color: var(--muted); }
 .hist-row .hist-clear {
   font-size: 11px; color: var(--muted); background: none; border: none;
