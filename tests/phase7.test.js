@@ -70,7 +70,7 @@ test('素材统计字段与清洗后的数据一致', () => {
   const zh = fs.readFileSync(path.join(ROOT, '素材', 'index.zh.json'), 'utf8').replace(/^\uFEFF/, '');
   const parsed = JSON.parse(zh);
   assert.equal(parsed.total, 1406);
-  assert.equal(parsed.with_image, 1398);
+  assert.equal(parsed.with_image, 1405);
   assert.equal(parsed.drinks.length, 1406);
 });
 
