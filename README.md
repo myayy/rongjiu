@@ -155,6 +155,21 @@
 手机浏览器打开后用「添加到主屏幕」（见上一节），即可获得全屏、离线可用的独立 App。
 （该地址由本仓库的 GitHub Pages 提供，页面壳和图片走网络，你的酒柜 / 材料 / 评分等数据始终只存在你自己手机里。）
 
+#### iPhone（iOS）怎么装
+
+| 你想达到的效果 | 用哪种方式 |
+| --- | --- |
+| 自己在手机上用，零成本、马上能用 | **Safari 打开上面那个地址 → 分享 → 添加到主屏幕**。全屏、无地址栏、可离线，图标和启动画面都有，和原生 App 看不出差别 |
+| 手上要一个 `.ipa` 安装包文件 | 仓库里已配好流水线：`Actions → iOS 打包 → Run workflow`，约 10 分钟产出 `rongjiu-ios-unsigned.ipa` |
+| 想给朋友一个链接、点开就能装 | 需要 Apple Developer 账号（$99/年）走 **TestFlight** 内测；`ios/` 工程与打包步骤都已就绪，只差签名证书 |
+
+关于这个 `.ipa`：iOS 和安卓不一样，**未签名的 ipa 不能直接装**，必须用电脑重新签名。
+把它拖进 [Sideloadly](https://sideloadly.io/)（或 AltStore），填自己的 Apple ID 就能装到 iPhone 上；
+免费 Apple ID 签出来的有效期是 7 天，到期再拖一次即可。
+
+> 为什么不能在这台电脑上直接出包：**iOS 只能用 macOS + Xcode 编译**，所以流水线跑在 GitHub 提供的 macOS 机器上，产物在 Actions 页面的 Artifacts 里下载。
+> 包内已经包含全部配方与图片（`www/` 约 81 MB），装完完全离线可用。
+
 ### 方式三：下载到本地用浏览器打开（最简单、完全离线）
 
 1. 下载或克隆本仓库到本地；
@@ -345,9 +360,10 @@ npx serve .          # 然后访问 http://localhost:3000/index.html
 ├─ manifest.webmanifest    PWA 清单：名称、图标、standalone、主题色
 ├─ sw.js                   Service Worker：外壳预缓存 + 配方图按需缓存
 ├─ .nojekyll               告诉 GitHub Pages 不要走 Jekyll 处理
-├─ icons/                  应用图标（192 / 512 / iOS 180，由 tools/make-icons.js 生成）
-├─ capacitor.config.json   Android 壳（Capacitor）配置：appId / appName / webDir
-├─ package.json            仅打包 APK 用的依赖声明；跑 App 本身不需要
+├─ icons/                  应用图标（1024 / 512 / 192 / iOS 180，由 tools/make-icons.js 生成）
+├─ capacitor.config.json   Android / iOS 壳（Capacitor）配置：appId / appName / webDir
+├─ package.json            仅打包 App 用的依赖声明；跑 App 本身不需要
+├─ .github/workflows/ios.yml  GitHub 的 macOS 机器上编译 iOS 包，产出未签名 .ipa
 ├─ css/style.css           全部样式
 ├─ js/
 │  ├─ data.js              配方数据（由 tools/gen-data.js 自动生成，勿手改）
@@ -359,8 +375,9 @@ npx serve .          # 然后访问 http://localhost:3000/index.html
 ├─ 素材/                   配方原图与 index.zh.json（约 74 MB）
 ├─ tools/                  数据生成 / 清洗 / 单位换算 / 图标 / www 组装等脚本
 ├─ tests/                  node --test 测试用例
-├─ www/                    （生成物，不进 git）打包 APK 用的网站目录
+├─ www/                    （生成物，不进 git）打包 App 用的网站目录
 ├─ android/                （生成物，不进 git）Capacitor 生成的安卓工程
+├─ ios/                    （生成物，不进 git）Capacitor 生成的 iOS 工程，需 macOS 才能编译
 └─ PRO.md                  需求与决策记录
 ```
 

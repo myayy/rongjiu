@@ -175,7 +175,9 @@ if (art.w !== art.h) {
   process.exit(1);
 }
 
-[512, 192, 180].forEach(function (size) {
+/* 1024 是 iOS App Store 要求的应用图标尺寸（AppIcon-512@2x.png），
+   直接从 512 的素材放大一倍，平面图标不会糊。 */
+[1024, 512, 192, 180].forEach(function (size) {
   var file = size === 180 ? 'apple-touch-icon.png' : 'icon-' + size + '.png';
   var out = path.join(OUT_DIR, file);
   var rgba = size === art.w ? art.rgba : resize(art.rgba, art.w, art.h, size);

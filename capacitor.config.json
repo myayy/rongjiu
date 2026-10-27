@@ -8,5 +8,8 @@
   "android": {
     "allowMixedContent": false,
     "captureInput": true
+  },
+  "ios": {
+    "contentInset": "never"
   }
 }

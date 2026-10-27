@@ -1,11 +1,13 @@
 _tmp/
 
-# Android 打包相关（体积大、可由命令重新生成，不进仓库）
+# 打包相关（体积大、可由命令重新生成，不进仓库）
 node_modules/
 www/
 android/
+ios/
 *.apk
 *.aab
+*.ipa
 *.keystore
 *.jks
 .gradle/
