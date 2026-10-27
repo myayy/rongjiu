@@ -160,7 +160,7 @@
 | 你想达到的效果 | 用哪种方式 |
 | --- | --- |
 | 自己在手机上用，零成本、马上能用 | **Safari 打开上面那个地址 → 分享 → 添加到主屏幕**。全屏、无地址栏、可离线，图标和启动画面都有，和原生 App 看不出差别 |
-| 手上要一个 `.ipa` 安装包文件 | 仓库里已配好流水线：`Actions → iOS 打包 → Run workflow`，约 10 分钟产出 `rongjiu-ios-unsigned.ipa` |
+| 手上要一个 `.ipa` 安装包文件 | 直接下：[**rongjiu-ios-unsigned.ipa**](https://github.com/myayy/rongjiu/releases/download/ios-v1.2.0/rongjiu-ios-unsigned.ipa)。仓库里也配好了流水线，改完代码打一个 `ios-*` 标签就会重新出包 |
 | 想给朋友一个链接、点开就能装 | 需要 Apple Developer 账号（$99/年）走 **TestFlight** 内测；`ios/` 工程与打包步骤都已就绪，只差签名证书 |
 
 关于这个 `.ipa`：iOS 和安卓不一样，**未签名的 ipa 不能直接装**，必须用电脑重新签名。
